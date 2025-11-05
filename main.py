@@ -14,6 +14,8 @@ from prompt_toolkit.patch_stdout import patch_stdout
 from rich.console import Console
 from rich.text import Text
 
+from accounts import create_account, load_accounts
+
 APP_NAME = "cli-py"
 ORG_NAME = "Astreum"
 
@@ -49,6 +51,12 @@ def ensure_data_dir() -> Path:
         base = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
     target = base / ORG_NAME / APP_NAME
     target.mkdir(parents=True, exist_ok=True)
+    # Provision sub-directories that the CLI expects to exist.
+    for folder in ("accounts", "definitions", "atoms"):
+        (target / folder).mkdir(exist_ok=True)
+    settings_path = target / "settings.json"
+    if not settings_path.exists():
+        settings_path.write_text("{}\n", encoding="utf-8")
     return target
 
 
@@ -62,13 +70,27 @@ class MenuItem:
 
 MENU_ITEMS = [
     MenuItem("Search", "search"),
-    MenuItem("Create Account", "create_account"),
-    MenuItem("List Accounts", "list_accounts"),
+    MenuItem("Accounts", "accounts"),
     MenuItem("Create Transaction", "create_transaction"),
-    MenuItem("Start API", "start_api"),
+    MenuItem("Definitions", "definitions"),
+    MenuItem("Terminal", "terminal"),
     MenuItem("Settings", "settings"),
     MenuItem("Quit", "quit"),
 ]
+
+PLACEHOLDER_DESCRIPTIONS = {
+    "search": (
+        "Enter a search term and press Enter. The full search experience is coming soon."
+    ),
+    "definitions": (
+        "Manage API definitions and schemas. This view will be available soon."
+    ),
+    "terminal": (
+        "Type a command and press Enter to run it. The integrated terminal is in development."
+    ),
+}
+
+INTERACTIVE_VIEWS = {"search", "accounts", "terminal"}
 
 
 def render_header(data_dir: Path) -> Text:
@@ -76,7 +98,6 @@ def render_header(data_dir: Path) -> Text:
     header = Text()
     header.append(HEADER_ART + "\n", style="bold cyan")
     header.append("(c) Astreum Foundation\n", style="dim")
-    header.append(f"Data directory: {data_dir}", style="green")
     return header
 
 
@@ -90,7 +111,12 @@ def render_menu(selected_index: int) -> Text:
     return Text("\n").join(lines)
 
 
-def render_view(key: str) -> Text:
+def render_view(
+    key: str,
+    data_dir: Optional[Path] = None,
+    accounts_message: Optional[tuple[str, str]] = None,
+    pending_account_name: Optional[str] = None,
+) -> Text:
     """Render the active view text."""
     if key == "menu":
         body = Text(
@@ -98,16 +124,46 @@ def render_view(key: str) -> Text:
         )
         body.append("Press Enter to open; Esc to return; 'q' to quit.", style="dim")
         return body
+    if key == "settings":
+        body = Text()
+        body.append("Settings\n", style="bold")
+        if data_dir is not None:
+            body.append(f"Data directory: {data_dir}\n\n", style="green")
+        body.append("[ Start API ] (coming soon)\n\n", style="yellow")
+        body.append("Press Esc to return to the menu.", style="dim")
+        return body
+    if key == "accounts":
+        body = Text()
+        body.append("Accounts\n", style="bold")
+        body.append("\n")
+        if accounts_message:
+            message_text, message_style = accounts_message
+            body.append(f"{message_text}\n\n", style=message_style)
+        accounts = load_accounts(data_dir)
+        if accounts:
+            for name, short_hex in accounts:
+                body.append(f"{name} - 0x{short_hex}\n", style="white")
+        else:
+            body.append("No accounts found.\n", style="yellow")
+        return body
 
     title = next((item.label for item in MENU_ITEMS if item.key == key), key.title())
     body = Text()
     body.append(f"{title}\n", style="bold")
-    body.append("Coming soon...\n\n", style="yellow")
+    message = PLACEHOLDER_DESCRIPTIONS.get(key, "Coming soon...")
+    body.append(f"{message}\n\n", style="yellow")
     body.append("Press Esc to return to the menu.", style="dim")
     return body
 
 
-def draw(console: Console, data_dir: Path, selected: int, active_key: str) -> None:
+def draw(
+    console: Console,
+    data_dir: Path,
+    selected: int,
+    active_key: str,
+    accounts_message: Optional[tuple[str, str]] = None,
+    pending_account_name: Optional[str] = None,
+) -> None:
     """Draw the full screen."""
     console.clear()
     console.print(render_header(data_dir))
@@ -115,9 +171,11 @@ def draw(console: Console, data_dir: Path, selected: int, active_key: str) -> No
     if active_key == "menu":
         console.print(render_menu(selected))
         console.print()
-        console.print(render_view("menu"))
+        console.print(render_view("menu", data_dir))
     else:
-        console.print(render_view(active_key))
+        message = accounts_message if active_key == "accounts" else None
+        pending_name = pending_account_name if active_key == "accounts" else None
+        console.print(render_view(active_key, data_dir, message, pending_name))
 
 
 def build_key_bindings(control: Dict[str, Optional[str]]) -> KeyBindings:
@@ -173,17 +231,41 @@ def run_cli() -> int:
 
     selected_index = 0
     active_key = "menu"
+    pending_account_name: Optional[str] = None
+    accounts_message: Optional[tuple[str, str]] = None
 
     control: Dict[str, Optional[str]] = {"action": None}
     session = PromptSession(key_bindings=build_key_bindings(control))
 
     while True:
-        draw(console, data_dir, selected_index, active_key)
+        draw(
+            console,
+            data_dir,
+            selected_index,
+            active_key,
+            accounts_message,
+            pending_account_name,
+        )
         control["action"] = None
-        render_prompt_separator(console)
+        should_prompt = active_key in INTERACTIVE_VIEWS
+        prompt_message = ""
+        placeholder_text = ""
+        if should_prompt:
+            if active_key == "accounts":
+                if pending_account_name is None:
+                    prompt_message = "> "
+                    placeholder_text = "Enter an account name and press enter to create"
+                else:
+                    prompt_message = (
+                        f"> Create an account called {pending_account_name} (yes/no) "
+                    )
+            else:
+                prompt_message = "> "
+        if should_prompt:
+            render_prompt_separator(console)
         try:
             with patch_stdout():
-                raw = session.prompt("> ")
+                raw = session.prompt(prompt_message, placeholder=placeholder_text)
         except KeyboardInterrupt:
             console.print("\n[red]Interrupted. Goodbye![/red]")
             return 0
@@ -191,11 +273,85 @@ def run_cli() -> int:
             console.print("\n[red]EOF received. Goodbye![/red]")
             return 0
 
-        command = control["action"] or raw.strip()
-        if not command:
+        action = control["action"]
+        text_input = raw.strip()
+
+        if action:
+            lower_action = action.lower()
+            if lower_action == "up":
+                selected_index = (selected_index - 1) % len(MENU_ITEMS)
+                active_key = "menu"
+                pending_account_name = None
+                accounts_message = None
+                continue
+            if lower_action == "down":
+                selected_index = (selected_index + 1) % len(MENU_ITEMS)
+                active_key = "menu"
+                pending_account_name = None
+                accounts_message = None
+                continue
+            if lower_action == "menu":
+                active_key = "menu"
+                pending_account_name = None
+                accounts_message = None
+                continue
+            if lower_action == "open":
+                item = MENU_ITEMS[selected_index]
+                if item.key == "quit":
+                    console.print("[green]Goodbye![/green]")
+                    return 0
+                active_key = item.key
+                pending_account_name = None
+                accounts_message = None
+                continue
+
+        if not text_input:
+            if active_key == "accounts":
+                continue
             continue
 
-        lower = command.lower()
+        if active_key == "accounts":
+            if pending_account_name is None:
+                lower_accounts = text_input.lower()
+                if lower_accounts in {"menu", "m"}:
+                    active_key = "menu"
+                    pending_account_name = None
+                    accounts_message = None
+                    continue
+                if lower_accounts in {"q", "quit", "exit"}:
+                    console.print("[green]Goodbye![/green]")
+                    return 0
+                if lower_accounts.isdigit():
+                    index = int(lower_accounts) - 1
+                    if 0 <= index < len(MENU_ITEMS):
+                        selected_index = index
+                        active_key = "menu"
+                        pending_account_name = None
+                        accounts_message = None
+                        continue
+                pending_account_name = text_input
+                accounts_message = None
+                continue
+
+            response = text_input.lower()
+            if response in {"yes", "y"}:
+                if data_dir is not None:
+                    success, message = create_account(data_dir, pending_account_name)
+                    accounts_message = (message, "green" if success else "red")
+                else:
+                    accounts_message = ("Data directory unavailable.", "red")
+                pending_account_name = None
+                continue
+
+            if response in {"no", "n"}:
+                accounts_message = ("Account creation cancelled.", "yellow")
+                pending_account_name = None
+                continue
+
+            accounts_message = ("Please answer 'yes' or 'no'.", "red")
+            continue
+
+        lower = text_input.lower()
         if lower in {"q", "quit", "exit"}:
             console.print("[green]Goodbye![/green]")
             return 0
@@ -203,15 +359,21 @@ def run_cli() -> int:
         if lower == "up":
             selected_index = (selected_index - 1) % len(MENU_ITEMS)
             active_key = "menu"
+            pending_account_name = None
+            accounts_message = None
             continue
 
         if lower == "down":
             selected_index = (selected_index + 1) % len(MENU_ITEMS)
             active_key = "menu"
+            pending_account_name = None
+            accounts_message = None
             continue
 
         if lower in {"menu", "m"}:
             active_key = "menu"
+            pending_account_name = None
+            accounts_message = None
             continue
 
         if lower in {"open"}:
@@ -220,6 +382,8 @@ def run_cli() -> int:
                 console.print("[green]Goodbye![/green]")
                 return 0
             active_key = item.key
+            pending_account_name = None
+            accounts_message = None
             continue
 
         if lower.isdigit():
@@ -227,6 +391,8 @@ def run_cli() -> int:
             if 0 <= index < len(MENU_ITEMS):
                 selected_index = index
                 active_key = "menu"
+                pending_account_name = None
+                accounts_message = None
                 continue
 
         matching_index = next(
@@ -238,6 +404,8 @@ def run_cli() -> int:
                 console.print("[green]Goodbye![/green]")
                 return 0
             active_key = lower
+            pending_account_name = None
+            accounts_message = None
             continue
 
         console.print(
