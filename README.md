@@ -1,5 +1,24 @@
 # cli-py
+
 A Command-line interface for interacting with the Astreum blockchain written in Python.
+
+```
+ █████╗   █████╗  ████████╗ ██████╗  ███████╗ ██╗   ██╗ ███╗   ███╗
+██╔══██╗ ██╔═══╝  ╚══██╔══╝ ██╔══██╗ ██╔════╝ ██║   ██║ ████╗ ████║
+███████║ ╚█████╗     ██║    ██████╔╝ █████╗   ██║   ██║ ██╔████╔██║
+██╔══██║  ╚═══██╗    ██║    ██╔══██╗ ██╔══╝   ██║   ██║ ██║╚██╔╝██║
+██║  ██║ ██████╔╝    ██║    ██║  ██║ ███████╗ ╚██████╔╝ ██║ ╚═╝ ██║
+╚═╝  ╚═╝ ╚═════╝     ╚═╝    ╚═╝  ╚═╝ ╚══════╝  ╚═════╝  ╚═╝     ╚═╝
+
+ ██████╗  ██╗      ██╗
+██╔════╝  ██║      ██║
+██║       ██║      ██║
+██║       ██║      ██║
+╚██████╗  ███████╗ ██║
+ ╚═════╝  ╚══════╝ ╚═╝
+
+(c) Astreum Foundation
+```
 
 ## Setup
 
@@ -20,3 +39,5 @@ A Command-line interface for interacting with the Astreum blockchain written in 
    ```bash
    pip install -r requirements.txt
    ```
+
+## Usage

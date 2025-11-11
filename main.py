@@ -1,57 +1,59 @@
-"""Astreum CLI entry point using Rich for rendering and prompt_toolkit for input."""
-
-from __future__ import annotations
-
+import msvcrt
 import os
 import platform
-from dataclasses import dataclass
+import sys
 from pathlib import Path
-from typing import Dict, Optional
+from typing import List, Optional, Tuple
 
-from prompt_toolkit import PromptSession
-from prompt_toolkit.key_binding import KeyBindings
-from prompt_toolkit.patch_stdout import patch_stdout
-from rich.console import Console
-from rich.text import Text
+from astreum._node import Node
 
-from accounts import create_account, load_accounts
+from accounts import create_account
+from definitions import save_definition
+from views import (
+    AddDefinitionPage,
+    CreateAccountPage,
+    DefinitionListPage,
+    ListAccountsPage,
+)
 
-APP_NAME = "cli-py"
-ORG_NAME = "Astreum"
-
-HEADER_ART = r"""
- █████╗   █████╗  ████████╗ ██████╗  ███████╗ ██╗   ██╗ ███╗   ███╗
-██╔══██╗ ██╔═══╝  ╚══██╔══╝ ██╔══██╗ ██╔════╝ ██║   ██║ ████╗ ████║
-███████║ ╚█████╗     ██║    ██████╔╝ █████╗   ██║   ██║ ██╔████╔██║
-██╔══██║  ╚═══██╗    ██║    ██╔══██╗ ██╔══╝   ██║   ██║ ██║╚██╔╝██║
-██║  ██║ ██████╔╝    ██║    ██║  ██║ ███████╗ ╚██████╔╝ ██║ ╚═╝ ██║
-╚═╝  ╚═╝ ╚═════╝     ╚═╝    ╚═╝  ╚═╝ ╚══════╝  ╚═════╝  ╚═╝     ╚═╝
-
- ██████╗  ██╗      ██╗
-██╔════╝  ██║      ██║
-██║       ██║      ██║
-██║       ██║      ██║
-╚██████╗  ███████╗ ██║
- ╚═════╝  ╚══════╝ ╚═╝
-"""
-
-
-def render_prompt_separator(console: Console) -> None:
-    """Draw a simple white line above the prompt."""
-    width = console.width
-    console.print(Text("─" * max(1, width), style="white"))
+MENU_LABELS = [
+    "Search",
+    "List Accounts",
+    "Create Account",
+    "Create Transaction",
+    "List definitions",
+    "Add a Definition",
+    "Terminal",
+    "Settings",
+    "Quit",
+]
+HEADER_LINES = [
+    " \u2588\u2588\u2588\u2588\u2588\u2557   \u2588\u2588\u2588\u2588\u2588\u2557  \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2557 \u2588\u2588\u2588\u2588\u2588\u2588\u2557  \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2557 \u2588\u2588\u2557   \u2588\u2588\u2557 \u2588\u2588\u2588\u2557   \u2588\u2588\u2588\u2557",
+    "\u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2557 \u2588\u2588\u2554\u2550\u2550\u2550\u255d  \u255a\u2550\u2550\u2588\u2588\u2554\u2550\u2550\u255d \u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2557 \u2588\u2588\u2554\u2550\u2550\u2550\u2550\u255d \u2588\u2588\u2551   \u2588\u2588\u2551 \u2588\u2588\u2588\u2588\u2557 \u2588\u2588\u2588\u2588\u2551",
+    "\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2551 \u255a\u2588\u2588\u2588\u2588\u2588\u2557     \u2588\u2588\u2551    \u2588\u2588\u2588\u2588\u2588\u2588\u2554\u255d \u2588\u2588\u2588\u2588\u2588\u2557   \u2588\u2588\u2551   \u2588\u2588\u2551 \u2588\u2588\u2554\u2588\u2588\u2588\u2588\u2554\u2588\u2588\u2551",
+    "\u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2551  \u255a\u2550\u2550\u2550\u2588\u2588\u2557    \u2588\u2588\u2551    \u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2557 \u2588\u2588\u2554\u2550\u2550\u255d   \u2588\u2588\u2551   \u2588\u2588\u2551 \u2588\u2588\u2551\u255a\u2588\u2588\u2554\u255d\u2588\u2588\u2551",
+    "\u2588\u2588\u2551  \u2588\u2588\u2551 \u2588\u2588\u2588\u2588\u2588\u2588\u2554\u255d    \u2588\u2588\u2551    \u2588\u2588\u2551  \u2588\u2588\u2551 \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2557 \u255a\u2588\u2588\u2588\u2588\u2588\u2588\u2554\u255d \u2588\u2588\u2551 \u255a\u2550\u255d \u2588\u2588\u2551",
+    "\u255a\u2550\u255d  \u255a\u2550\u255d \u255a\u2550\u2550\u2550\u2550\u2550\u255d     \u255a\u2550\u255d    \u255a\u2550\u255d  \u255a\u2550\u255d \u255a\u2550\u2550\u2550\u2550\u2550\u2550\u255d  \u255a\u2550\u2550\u2550\u2550\u2550\u255d  \u255a\u2550\u255d     \u255a\u2550\u255d",
+    "",
+    " \u2588\u2588\u2588\u2588\u2588\u2588\u2557  \u2588\u2588\u2557      \u2588\u2588\u2557",
+    "\u2588\u2588\u2554\u2550\u2550\u2550\u2550\u255d  \u2588\u2588\u2551      \u2588\u2588\u2551",
+    "\u2588\u2588\u2551       \u2588\u2588\u2551      \u2588\u2588\u2551",
+    "\u2588\u2588\u2551       \u2588\u2588\u2551      \u2588\u2588\u2551",
+    "\u255a\u2588\u2588\u2588\u2588\u2588\u2588\u2557  \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2557 \u2588\u2588\u2551",
+    " \u255a\u2550\u2550\u2550\u2550\u2550\u255d  \u255a\u2550\u2550\u2550\u2550\u2550\u2550\u255d \u255a\u2550\u255d",
+]
+FOOTER_TEXT = "Tab to select \u2022 Enter to select \u2022 Esc to return"
 
 
 def ensure_data_dir() -> Path:
-    """Ensure the per-user data directory exists and return its path."""
+    """Ensure the data directory structure exists and return its path."""
     system = platform.system()
     if system == "Windows":
         base = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
     else:
         base = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
-    target = base / ORG_NAME / APP_NAME
+    target = base / "Astreum" / "cli-py"
     target.mkdir(parents=True, exist_ok=True)
-    # Provision sub-directories that the CLI expects to exist.
     for folder in ("accounts", "definitions", "atoms"):
         (target / folder).mkdir(exist_ok=True)
     settings_path = target / "settings.json"
@@ -60,362 +62,275 @@ def ensure_data_dir() -> Path:
     return target
 
 
-@dataclass
-class MenuItem:
-    """Representation of a menu entry."""
+class SelectionList:
+    """Reusable helper to manage selection state across views."""
 
-    label: str
-    key: str
+    def __init__(
+        self,
+        labels: List[str],
+        active_prefix: str = "> ",
+        inactive_prefix: str = "  ",
+    ) -> None:
+        self._labels = labels
+        self._active_prefix = active_prefix
+        self._inactive_prefix = inactive_prefix
+        self.index = 0 if labels else -1
 
+    def move(self, delta: int) -> None:
+        if not self._labels:
+            self.index = -1
+            return
+        self.index = (self.index + delta) % len(self._labels)
 
-MENU_ITEMS = [
-    MenuItem("Search", "search"),
-    MenuItem("Accounts", "accounts"),
-    MenuItem("Create Transaction", "create_transaction"),
-    MenuItem("Definitions", "definitions"),
-    MenuItem("Terminal", "terminal"),
-    MenuItem("Settings", "settings"),
-    MenuItem("Quit", "quit"),
-]
+    def advance(self) -> None:
+        self.move(1)
 
-PLACEHOLDER_DESCRIPTIONS = {
-    "search": (
-        "Enter a search term and press Enter. The full search experience is coming soon."
-    ),
-    "definitions": (
-        "Manage API definitions and schemas. This view will be available soon."
-    ),
-    "terminal": (
-        "Type a command and press Enter to run it. The integrated terminal is in development."
-    ),
-}
+    def set_index(self, index: int) -> None:
+        if not self._labels:
+            self.index = -1
+            return
+        if 0 <= index < len(self._labels):
+            self.index = index
 
-INTERACTIVE_VIEWS = {"search", "accounts", "terminal"}
+    def current(self) -> Optional[str]:
+        if self.index < 0 or self.index >= len(self._labels):
+            return None
+        return self._labels[self.index]
 
+    def render_lines(self) -> List[str]:
+        lines: List[str] = []
+        for idx, label in enumerate(self._labels):
+            prefix = self._active_prefix if idx == self.index else self._inactive_prefix
+            lines.append(f"{prefix}{label}")
+        return lines
 
-def render_header(data_dir: Path) -> Text:
-    """Render the header block with ASCII art and metadata."""
-    header = Text()
-    header.append(HEADER_ART + "\n", style="bold cyan")
-    header.append("(c) Astreum Foundation\n", style="dim")
-    return header
-
-
-def render_menu(selected_index: int) -> Text:
-    """Render the menu with the current selection highlighted."""
-    lines = []
-    for index, item in enumerate(MENU_ITEMS):
-        prefix = "> " if index == selected_index else "  "
-        style = "bold white on blue" if index == selected_index else "white"
-        lines.append(Text(prefix + item.label, style=style))
-    return Text("\n").join(lines)
+    @property
+    def labels(self) -> List[str]:
+        return self._labels
 
 
-def render_view(
-    key: str,
-    data_dir: Optional[Path] = None,
-    accounts_message: Optional[tuple[str, str]] = None,
-    pending_account_name: Optional[str] = None,
-) -> Text:
-    """Render the active view text."""
-    if key == "menu":
-        body = Text(
-            "Use arrow keys (↑/↓ or j/k) or numbers to choose an option.\n", style="dim"
-        )
-        body.append("Press Enter to open; Esc to return; 'q' to quit.", style="dim")
-        return body
-    if key == "settings":
-        body = Text()
-        body.append("Settings\n", style="bold")
-        if data_dir is not None:
-            body.append(f"Data directory: {data_dir}\n\n", style="green")
-        body.append("[ Start API ] (coming soon)\n\n", style="yellow")
-        body.append("Press Esc to return to the menu.", style="dim")
-        return body
-    if key == "accounts":
-        body = Text()
-        body.append("Accounts\n", style="bold")
-        body.append("\n")
-        if accounts_message:
-            message_text, message_style = accounts_message
-            body.append(f"{message_text}\n\n", style=message_style)
-        accounts = load_accounts(data_dir)
-        if accounts:
-            for name, short_hex in accounts:
-                body.append(f"{name} - 0x{short_hex}\n", style="white")
+class SettingsPage:
+    """Display readonly configuration details."""
+
+    def __init__(self, data_dir: Path) -> None:
+        self._data_dir = data_dir
+
+    def update_data_dir(self, data_dir: Path) -> None:
+        self._data_dir = data_dir
+
+    def render_lines(self) -> List[str]:
+        return [
+            "\x1b[1mSettings\x1b[0m",
+            "",
+            f"Data directory: {self._data_dir}",
+        ]
+
+
+class App:
+    lines: List[str]
+    header_lines: Optional[Tuple[int, int]]  # (start row, end row)
+    body_lines: Optional[Tuple[int, int]]  # (start row, end row)
+    footer_lines: Optional[Tuple[int, int]]  # (start row, end row)
+    cursor: Optional[Tuple[int, int]]  # (row, col) 0-based
+
+    def __init__(self) -> None:
+        self.data_dir = ensure_data_dir()
+        self.node = Node({"cold_storage_path": str(self.data_dir / "atoms")})
+        self.header_block = HEADER_LINES + ["(c) Astreum Foundation"]
+        self.footer_text = f"\x1b[90m{FOOTER_TEXT}\x1b[0m"
+        self.menu = SelectionList(MENU_LABELS)
+        self.create_account = CreateAccountPage()
+        self.list_accounts = ListAccountsPage()
+        self.add_definition = AddDefinitionPage()
+        self.definition_list = DefinitionListPage()
+        self.settings_page = SettingsPage(self.data_dir)
+        self.active_view = "menu"
+        self.lines = []
+        self.header_lines = None
+        self.body_lines = None
+        self.footer_lines = None
+        self.cursor = None
+
+    def switch_view(self, view: str) -> None:
+        if view == "create_account":
+            self.active_view = "create_account"
+            self.create_account.prepare_for_entry()
+        elif view == "list_accounts":
+            self.active_view = "list_accounts"
+            self.list_accounts.refresh(self.data_dir)
+        elif view == "list_definitions":
+            self.active_view = "list_definitions"
+            self.definition_list.refresh(self.data_dir)
+        elif view == "add_definition":
+            self.active_view = "add_definition"
+            self.add_definition.prepare_for_entry()
+        elif view == "settings":
+            self.active_view = "settings"
+            self.settings_page.update_data_dir(self.data_dir)
         else:
-            body.append("No accounts found.\n", style="yellow")
-        return body
+            self.active_view = "menu"
 
-    title = next((item.label for item in MENU_ITEMS if item.key == key), key.title())
-    body = Text()
-    body.append(f"{title}\n", style="bold")
-    message = PLACEHOLDER_DESCRIPTIONS.get(key, "Coming soon...")
-    body.append(f"{message}\n\n", style="yellow")
-    body.append("Press Esc to return to the menu.", style="dim")
-    return body
+    def advance_selection(self) -> None:
+        if self.active_view == "menu":
+            self.menu.advance()
+        elif self.active_view == "list_definitions":
+            self.definition_list.move(1)
+        elif self.active_view == "create_account":
+            self.create_account.cycle_focus()
+        elif self.active_view == "add_definition":
+            self.add_definition.cycle_focus()
 
+    def handle_special_key(self, code: str) -> bool:
+        """Handle arrow-key style navigation from msvcrt."""
+        if code in ("H", "K"):
+            return self._move_active_selection(-1)
+        if code in ("P", "M"):
+            return self._move_active_selection(1)
+        return False
 
-def draw(
-    console: Console,
-    data_dir: Path,
-    selected: int,
-    active_key: str,
-    accounts_message: Optional[tuple[str, str]] = None,
-    pending_account_name: Optional[str] = None,
-) -> None:
-    """Draw the full screen."""
-    console.clear()
-    console.print(render_header(data_dir))
-    console.print()
-    if active_key == "menu":
-        console.print(render_menu(selected))
-        console.print()
-        console.print(render_view("menu", data_dir))
-    else:
-        message = accounts_message if active_key == "accounts" else None
-        pending_name = pending_account_name if active_key == "accounts" else None
-        console.print(render_view(active_key, data_dir, message, pending_name))
+    def _move_active_selection(self, delta: int) -> bool:
+        if self.active_view == "menu":
+            self.menu.move(delta)
+            return True
+        if self.active_view == "list_definitions":
+            self.definition_list.move(delta)
+            return True
+        return False
 
+    def handle_char(self, key: str) -> bool:
+        if self.active_view == "create_account":
+            return self.create_account.handle_char(key)
+        if self.active_view == "add_definition":
+            return self.add_definition.handle_char(key)
+        return False
 
-def build_key_bindings(control: Dict[str, Optional[str]]) -> KeyBindings:
-    """Create key bindings that update control['action'] and close the prompt."""
-    kb = KeyBindings()
+    def handle_enter(self) -> bool:
+        if self.active_view == "menu":
+            return self._activate_menu_selection()
+        if self.active_view == "create_account":
+            self.create_account.handle_enter(self._submit_account)
+            return False
+        if self.active_view == "add_definition":
+            self.add_definition.handle_enter(self._submit_definition)
+            return False
+        if self.active_view == "list_definitions":
+            self.definition_list.handle_enter(self.node)
+            return False
+        if self.active_view == "list_accounts":
+            return False
+        if self.active_view == "settings":
+            return False
+        return False
 
-    @kb.add("up")
-    @kb.add("k")
-    def _(event) -> None:
-        control["action"] = "up"
-        event.app.current_buffer.reset()
-        event.app.exit("")
+    def _activate_menu_selection(self) -> bool:
+        label = self.menu.current()
+        if label is None:
+            return False
+        normalized = label.lower()
+        if normalized == "quit":
+            return True
+        if normalized == "create account":
+            self.switch_view("create_account")
+            return False
+        if normalized == "list accounts":
+            self.switch_view("list_accounts")
+            return False
+        if normalized == "list definitions":
+            self.switch_view("list_definitions")
+            return False
+        if normalized == "add a definition":
+            self.switch_view("add_definition")
+            return False
+        if normalized == "settings":
+            self.switch_view("settings")
+            return False
+        # Placeholder for other menu actions.
+        return False
 
-    @kb.add("down")
-    @kb.add("j")
-    def _(event) -> None:
-        control["action"] = "down"
-        event.app.current_buffer.reset()
-        event.app.exit("")
+    def _submit_account(self, name: str) -> tuple[bool, str]:
+        success, message = create_account(self.data_dir, name)
+        if success:
+            self.list_accounts.refresh(self.data_dir)
+            self.switch_view("list_accounts")
+        return success, message
 
-    @kb.add("enter")
-    def _(event) -> None:
-        text = event.app.current_buffer.text
-        if text.strip():
-            event.app.exit(text)
+    def _submit_definition(self, name: str, expression: str) -> tuple[bool, str]:
+        return save_definition(self.data_dir, name, expression)
+
+    def handle_escape(self) -> bool:
+        if self.active_view == "menu":
+            return True
+        self.switch_view("menu")
+        return False
+
+    def render(self, refresh: bool = False) -> None:
+        lines: List[str] = []
+        lines.extend(self.header_block)
+        self.header_lines = (0, len(self.header_block) - 1) if self.header_block else None
+        if self.header_block:
+            lines.append("")
+        body_start = len(lines)
+        body_lines = self._render_body_lines()
+        lines.extend(body_lines)
+        if body_lines:
+            self.body_lines = (body_start, body_start + len(body_lines) - 1)
         else:
-            control["action"] = "open"
-            event.app.current_buffer.reset()
-            event.app.exit("")
+            self.body_lines = None
+        lines.append("")
+        footer_start = len(lines)
+        lines.append(self.footer_text)
+        self.footer_lines = (footer_start, footer_start)
+        self.lines = lines
+        output = "".join(f"{line}\n" for line in lines)
+        if refresh:
+            sys.stdout.buffer.write(b"\x1b[2J\x1b[H")
+        sys.stdout.buffer.write(output.encode("utf-8"))
+        sys.stdout.flush()
 
-    @kb.add("escape")
-    @kb.add("left")
-    def _(event) -> None:
-        control["action"] = "menu"
-        event.app.current_buffer.reset()
-        event.app.exit("")
-
-    @kb.add("c-c")
-    def _(event) -> None:
-        event.app.exit(exception=KeyboardInterrupt())
-
-    @kb.add("c-d")
-    def _(event) -> None:
-        event.app.exit(exception=EOFError())
-
-    return kb
-
-
-def run_cli() -> int:
-    """Run the Rich-based CLI loop with prompt_toolkit input handling."""
-    data_dir = ensure_data_dir()
-    console = Console()
-
-    selected_index = 0
-    active_key = "menu"
-    pending_account_name: Optional[str] = None
-    accounts_message: Optional[tuple[str, str]] = None
-
-    control: Dict[str, Optional[str]] = {"action": None}
-    session = PromptSession(key_bindings=build_key_bindings(control))
-
-    while True:
-        draw(
-            console,
-            data_dir,
-            selected_index,
-            active_key,
-            accounts_message,
-            pending_account_name,
-        )
-        control["action"] = None
-        should_prompt = active_key in INTERACTIVE_VIEWS
-        prompt_message = ""
-        placeholder_text = ""
-        if should_prompt:
-            if active_key == "accounts":
-                if pending_account_name is None:
-                    prompt_message = "> "
-                    placeholder_text = "Enter an account name and press enter to create"
-                else:
-                    prompt_message = (
-                        f"> Create an account called {pending_account_name} (yes/no) "
-                    )
-            else:
-                prompt_message = "> "
-        if should_prompt:
-            render_prompt_separator(console)
-        try:
-            with patch_stdout():
-                raw = session.prompt(prompt_message, placeholder=placeholder_text)
-        except KeyboardInterrupt:
-            console.print("\n[red]Interrupted. Goodbye![/red]")
-            return 0
-        except EOFError:
-            console.print("\n[red]EOF received. Goodbye![/red]")
-            return 0
-
-        action = control["action"]
-        text_input = raw.strip()
-
-        if action:
-            lower_action = action.lower()
-            if lower_action == "up":
-                selected_index = (selected_index - 1) % len(MENU_ITEMS)
-                active_key = "menu"
-                pending_account_name = None
-                accounts_message = None
-                continue
-            if lower_action == "down":
-                selected_index = (selected_index + 1) % len(MENU_ITEMS)
-                active_key = "menu"
-                pending_account_name = None
-                accounts_message = None
-                continue
-            if lower_action == "menu":
-                active_key = "menu"
-                pending_account_name = None
-                accounts_message = None
-                continue
-            if lower_action == "open":
-                item = MENU_ITEMS[selected_index]
-                if item.key == "quit":
-                    console.print("[green]Goodbye![/green]")
-                    return 0
-                active_key = item.key
-                pending_account_name = None
-                accounts_message = None
-                continue
-
-        if not text_input:
-            if active_key == "accounts":
-                continue
-            continue
-
-        if active_key == "accounts":
-            if pending_account_name is None:
-                lower_accounts = text_input.lower()
-                if lower_accounts in {"menu", "m"}:
-                    active_key = "menu"
-                    pending_account_name = None
-                    accounts_message = None
-                    continue
-                if lower_accounts in {"q", "quit", "exit"}:
-                    console.print("[green]Goodbye![/green]")
-                    return 0
-                if lower_accounts.isdigit():
-                    index = int(lower_accounts) - 1
-                    if 0 <= index < len(MENU_ITEMS):
-                        selected_index = index
-                        active_key = "menu"
-                        pending_account_name = None
-                        accounts_message = None
-                        continue
-                pending_account_name = text_input
-                accounts_message = None
-                continue
-
-            response = text_input.lower()
-            if response in {"yes", "y"}:
-                if data_dir is not None:
-                    success, message = create_account(data_dir, pending_account_name)
-                    accounts_message = (message, "green" if success else "red")
-                else:
-                    accounts_message = ("Data directory unavailable.", "red")
-                pending_account_name = None
-                continue
-
-            if response in {"no", "n"}:
-                accounts_message = ("Account creation cancelled.", "yellow")
-                pending_account_name = None
-                continue
-
-            accounts_message = ("Please answer 'yes' or 'no'.", "red")
-            continue
-
-        lower = text_input.lower()
-        if lower in {"q", "quit", "exit"}:
-            console.print("[green]Goodbye![/green]")
-            return 0
-
-        if lower == "up":
-            selected_index = (selected_index - 1) % len(MENU_ITEMS)
-            active_key = "menu"
-            pending_account_name = None
-            accounts_message = None
-            continue
-
-        if lower == "down":
-            selected_index = (selected_index + 1) % len(MENU_ITEMS)
-            active_key = "menu"
-            pending_account_name = None
-            accounts_message = None
-            continue
-
-        if lower in {"menu", "m"}:
-            active_key = "menu"
-            pending_account_name = None
-            accounts_message = None
-            continue
-
-        if lower in {"open"}:
-            item = MENU_ITEMS[selected_index]
-            if item.key == "quit":
-                console.print("[green]Goodbye![/green]")
-                return 0
-            active_key = item.key
-            pending_account_name = None
-            accounts_message = None
-            continue
-
-        if lower.isdigit():
-            index = int(lower) - 1
-            if 0 <= index < len(MENU_ITEMS):
-                selected_index = index
-                active_key = "menu"
-                pending_account_name = None
-                accounts_message = None
-                continue
-
-        matching_index = next(
-            (idx for idx, item in enumerate(MENU_ITEMS) if item.key == lower), None
-        )
-        if matching_index is not None:
-            selected_index = matching_index
-            if lower == "quit":
-                console.print("[green]Goodbye![/green]")
-                return 0
-            active_key = lower
-            pending_account_name = None
-            accounts_message = None
-            continue
-
-        console.print(
-            "[red]Unknown command. Use arrows, numbers, Enter, Esc, or 'q'.[/red]"
-        )
+    def _render_body_lines(self) -> List[str]:
+        if self.active_view == "menu":
+            return self.menu.render_lines()
+        if self.active_view == "create_account":
+            return self.create_account.render_lines()
+        if self.active_view == "list_accounts":
+            return self.list_accounts.render_lines()
+        if self.active_view == "list_definitions":
+            return self.definition_list.render_lines()
+        if self.active_view == "add_definition":
+            return self.add_definition.render_lines()
+        if self.active_view == "settings":
+            return self.settings_page.render_lines()
+        return []
 
 
 def main() -> int:
-    """CLI entry point."""
-    return run_cli()
+    app = App()
+    app.render()
+    try:
+        while True:
+            key = msvcrt.getwch()
+            if key in ("\x00", "\xe0"):
+                extended = msvcrt.getwch()
+                if app.handle_special_key(extended):
+                    app.render(refresh=True)
+                continue
+            if key == "\t":
+                app.advance_selection()
+                app.render(refresh=True)
+            elif key in ("\r", "\n"):
+                if app.handle_enter():
+                    break
+                app.render(refresh=True)
+            elif key == "\x1b":
+                if app.handle_escape():
+                    break
+                app.render(refresh=True)
+            else:
+                if app.handle_char(key):
+                    app.render(refresh=True)
+    except KeyboardInterrupt:
+        pass
+    return 0
 
 
 if __name__ == "__main__":
