@@ -41,3 +41,7 @@ A Command-line interface for interacting with the Astreum blockchain written in 
    ```
 
 ## Usage
+
+```bash
+python main.py
+```
