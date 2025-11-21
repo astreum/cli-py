@@ -42,12 +42,12 @@ def load_accounts(data_dir: Optional[Path]) -> list[tuple[str, str]]:
 
 class AccountListPage(BasePage):
     def __init__(self) -> None:
-        super().__init__(title="Account List")
+        super().__init__(title="List of Accounts")
 
     def load_elements(self, app: "App"):
         if self.elements == []:
             accounts = load_accounts(app.data_dir)
             self.elements = [
-                PageElement(label=name, body=pub_hex)
+                PageElement(label=name, body=f"0x{pub_hex}")
                     for name, pub_hex in accounts
                 ]

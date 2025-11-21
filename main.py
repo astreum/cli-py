@@ -45,9 +45,8 @@ class App:
     def __init__(self) -> None:
         self.data_dir = ensure_data_dir()
 
-        configs = load_config(self.data_dir)
-        self.config = configs["cli"]
-        self.node = Node(configs["node"])
+        self.configs = load_config(self.data_dir)
+        self.node = Node(self.configs["node"])
         
         self.header_block = HEADER_LINES
         self.footer_text = f"\x1b[90m{FOOTER_TEXT}\x1b[0m"
@@ -72,6 +71,7 @@ class App:
         self.line_offset = 0
         self.header_lines = None
         self.footer_lines = None
+        self.flash_message = None
         
         self.should_exit = False
 
@@ -118,11 +118,11 @@ class App:
                 self.cursor_effect_switch = True
                 self.input_focus = True
 
-        if element.next:
+        elif element.next:
             self.previous_view = self.active_view
             self.active_view = element.next
         
-        if element.action:
+        elif element.action:
             element.action(app=self)
 
     def handle_delete(self):
@@ -135,13 +135,18 @@ class App:
                 element.handle_input_delete()
         
     def handle_return(self):
+        if self.flash_message:
+            self.flash_message = None
+            
         if self.input_focus:
             self.cursor_effect_switch = False
             self.input_focus = False
-            return
         
-        if self.previous_view:
-            self.active_view = self.previous_view
+        elif self.previous_view:
+            current_view = self.active_view
+            next_view = self.previous_view
+            self.previous_view = current_view
+            self.active_view = next_view
     
     def handle_char(self, key):
         if not self.input_focus:
@@ -182,16 +187,24 @@ def main() -> int:
 
     cursor_effect = time.time()
     CURSOR_SPEED = 0.5
+    RENDER_SPEED = 0.03
+    render_time = time.time()
 
     try:
         while not app.should_exit:
             now = time.time()
             updated = False
 
-            if app.input_focus and now - cursor_effect >= CURSOR_SPEED:
-                app.cursor_effect_switch = not app.cursor_effect_switch
-                cursor_effect = now
-                updated = True
+            if app.input_focus:
+                
+                if now - render_time >= RENDER_SPEED:
+                    render_app(app, cursor_effect=app.cursor_effect_switch)
+                    render_time = now
+
+                if now - cursor_effect >= CURSOR_SPEED:
+                    app.cursor_effect_switch = not app.cursor_effect_switch
+                    cursor_effect = now
+                    updated = True
 
             if msvcrt.kbhit():
                 key = msvcrt.getwch()

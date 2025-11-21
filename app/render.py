@@ -28,12 +28,17 @@ def render_app(app, cursor_effect: bool = False) -> None:
     lines: List[str] = ["","",""]
 
     lines.extend(app.header_block)
-    app.header_lines = (0, len(app.header_block) - 1) if app.header_block else None
-    if app.header_block:
+    lines.append("")
+
+    if app.flash_message:
+        lines.append(app.flash_message)
         lines.append("")
 
     body_start = len(lines)
     page = app.pages.get(app.active_view)
+    if page is None:
+        page = app.pages["menu"]
+        
     page.load_elements(app=app)
     body_lines = page.render(cursor_effect=cursor_effect)
     lines.extend(body_lines)

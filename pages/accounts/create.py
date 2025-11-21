@@ -45,5 +45,5 @@ class AccountCreatePage(BasePage):
         except OSError as exc:
             app.flash_message = f"Failed to save account: {exc}"
         
-        app.previous_view = "account_new"
+        app.previous_view = "account_create"
         app.active_view = "account_list"

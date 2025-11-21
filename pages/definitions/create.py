@@ -16,7 +16,9 @@ class DefinitionCreatePage(BasePage):
             self.elements = [
                 PageElement(label="Name", input=[""]),
                 PageElement(label="Expression", input=["","",""]),
-                PageElement(label="Submit", action=self.handle_submit)
+                PageElement(label="Submit", action=self.handle_submit),
+                PageElement(label="Terminal", next="terminal")
+                
             ]
 
     def handle_submit(self, app: "App"):

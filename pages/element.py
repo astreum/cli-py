@@ -34,11 +34,10 @@ class PageElement:
                         if cursor_effect:
                             if col < len(line):
                                 rendered_line = f"{line[:col]}_{line[col+1:]}"
+                            elif col == len(line):
+                                rendered_line = f"{line}_"
                             else:
-                                if line == "":
-                                    rendered_line = f" "
-                                else:
-                                    rendered_line = f"{line}"
+                                rendered_line = f"{line}"
 
                 lines.append(f"  {rendered_line}")
 
@@ -54,7 +53,7 @@ class PageElement:
             return False
         row, col = self.input_index
         row = max(0, min(row, len(self.input) - 1))
-        col = max(0, col)
+        col = max(0, min(col, len(self.input[row])))
 
         if direction == "up":
             if row == 0:
@@ -76,12 +75,7 @@ class PageElement:
                 col = self._last_col(row)
         elif direction == "right":
             current_len = len(self.input[row])
-            if current_len == 0:
-                if row >= len(self.input) - 1:
-                    return False
-                row += 1
-                col = 0
-            elif col < current_len - 1:
+            if col < current_len:
                 col += 1
             else:
                 if row >= len(self.input) - 1:
@@ -96,13 +90,11 @@ class PageElement:
 
     def _clamped_col(self, row: int, col: int) -> int:
         row_len = len(self.input[row])
-        if row_len == 0:
-            return 0
-        return min(col, row_len - 1)
+        return min(col, row_len)
 
     def _last_col(self, row: int) -> int:
         row_len = len(self.input[row])
-        return max(row_len - 1, 0)
+        return row_len
     
     def handle_input(self, char: str) -> None:
         if self.input is None:
@@ -147,32 +139,28 @@ class PageElement:
             self.input_index = (row + 1, 0)
 
     def handle_input_delete(self) -> None:
-        if self.input is None:
+        if not self.input:
             return
 
         row, col = self.input_index
 
-        # Case 1: Simple deletion within the line
-        if col > 0:
-            current_line = self.input[row]
-            # Remove the character at index col-1
-            self.input[row] = current_line[:col - 1] + current_line[col:]
-            # Move cursor back one space
-            self.input_index = (row, col - 1)
+        if not (0 <= row < len(self.input)):
+            return
 
-        # Case 2: Start of line (Merge with previous line)
-        elif row > 0:
-            current_line = self.input[row]
-            previous_line = self.input[row - 1]
-            
-            # The cursor should land where the previous line ended
-            new_col = len(previous_line)
-            
-            # Merge: Append current line to the previous one
-            self.input[row - 1] = previous_line + current_line
-            
-            # Remove the current line (now merged)
-            del self.input[row]
-            
-            # Move cursor up to the merge point
-            self.input_index = (row - 1, new_col)
+        current_line = self.input[row]
+        col = max(0, min(col, len(current_line)))
+
+        if col > 0:
+            self.input[row] = current_line[:col - 1] + current_line[col:]
+            self.input_index = (row, col - 1)
+            return
+
+        if row == 0:
+            return
+
+        previous_line = self.input[row - 1]
+        new_col = len(previous_line)
+        self.input[row - 1] = previous_line + current_line
+        del self.input[row]
+        self.input_index = (row - 1, new_col)
+
