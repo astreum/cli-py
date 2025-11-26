@@ -1,3 +1,3 @@
 rich==14.2.0
 prompt-toolkit==3.0.52
-astreum==0.2.61
+astreum==0.2.69

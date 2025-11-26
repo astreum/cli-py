@@ -42,6 +42,24 @@ A Command-line interface for interacting with the Astreum blockchain written in 
 
 ## Usage
 
+Running `python main.py` with no flags launches the interactive TUI. Use `--eval` to enter evaluation mode:
+
+### Start the TUI
 ```bash
 python main.py
+```
+
+### Evaluate a postfix expression
+```bash
+python main.py --eval --expr "(1 2 add)"
+```
+
+### Evaluate a script file (default main entry)
+```bash
+python main.py --eval --script "./script.aex"
+```
+
+### Evaluate a script file with arguments for `main`
+```bash
+python main.py --eval --script "./add_script.aex" --expr "(a b main)"
 ```

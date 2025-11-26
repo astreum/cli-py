@@ -1,12 +1,16 @@
+import argparse
 import msvcrt
 import sys
 import time
+import uuid
 from typing import List, Optional, Tuple
 
 from app.config import load_config
 from app.data import ensure_data_dir
 from app.render import render_app
-from astreum._node import Node
+from astreum._node import Node, Expr
+from evaluation import load_script_to_environment
+from evaluation.expression import expression_from_string
 from pages.accounts.create import AccountCreatePage
 from pages.accounts.list import AccountListPage
 from pages.definitions.create import DefinitionCreatePage
@@ -177,8 +181,7 @@ class App:
         
         return page.elements[page.index]
     
-    
-def main() -> int:
+def run_app() -> int:
     app = App()
 
     sys.stdout.write(f"\033[?1049h\033[?25l")
@@ -235,6 +238,72 @@ def main() -> int:
     sys.stdout.flush()
 
     return 0
+
+
+def run_eval(script: Optional[str], entry_expr_str: Optional[str]) -> int:
+    data_dir = ensure_data_dir()
+    configs = load_config(data_dir)
+    node = Node(configs["node"])
+
+    evaluated_expr = None
+    env_id: Optional[uuid.UUID] = None
+
+    if script is not None:
+        env = load_script_to_environment(script=script)
+        env_id = uuid.uuid4()
+        node.environments[env_id] = env
+
+    try:
+        match (script is not None, entry_expr_str is not None):
+            case (True, True):
+                expr = expression_from_string(source=entry_expr_str)
+                evaluated_expr = node.high_eval(expr=expr, env_id=env_id)
+            case (True, False):
+                expr = Expr.Symbol("main")
+                evaluated_expr = node.high_eval(expr=expr, env_id=env_id)
+            case (False, True):
+                expr = expression_from_string(source=entry_expr_str)
+                evaluated_expr = node.high_eval(expr=expr)
+            case (False, False):
+                sys.stdout.write("Eval command requires --script or --expr.\n")
+                sys.stdout.flush()
+                return 1
+    finally:
+        if env_id is not None:
+            node.environments.pop(env_id, None)
+
+    if evaluated_expr is not None:
+        sys.stdout.write(f"{evaluated_expr}\n")
+        sys.stdout.flush()
+        return 0
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Astreum CLI")
+    parser.add_argument(
+        "--eval",
+        dest="eval_mode",
+        action="store_true",
+        help="Enable evaluation mode instead of launching the GUI",
+    )
+    parser.add_argument("--script", type=str, help="Path to a script file", default=None)
+    parser.add_argument(
+        "--expr",
+        type=str,
+        help="Postfix expression to evaluate (e.g., '(a b main)')",
+        default=None,
+    )
+    return parser
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+
+    if args.eval_mode:
+        return run_eval(script=args.script, entry_expr_str=args.expr)
+
+    return run_app()
 
 
 if __name__ == "__main__":
