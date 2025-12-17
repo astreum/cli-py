@@ -1,4 +1,4 @@
-from pages.base import BasePage
+from .base import BasePage
 
 
 class TerminalPage(BasePage):

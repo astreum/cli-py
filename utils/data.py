@@ -12,6 +12,6 @@ def ensure_data_dir() -> Path:
         base = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
     target = base / "Astreum" / "cli-py"
     target.mkdir(parents=True, exist_ok=True)
-    for folder in ("accounts", "definitions", "atoms"):
+    for folder in ("accounts", "atoms"):
         (target / folder).mkdir(exist_ok=True)
     return target

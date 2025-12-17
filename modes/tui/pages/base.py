@@ -1,7 +1,7 @@
 
 from typing import List
 
-from pages.element import PageElement
+from .element import PageElement
 
 
 

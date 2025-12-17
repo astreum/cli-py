@@ -1,7 +1,7 @@
 import re
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
-from pages.base import BasePage, PageElement
+from ..base import BasePage, PageElement
 
 class AccountCreatePage(BasePage):
     def __init__(self) -> None:

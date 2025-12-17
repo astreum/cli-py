@@ -4,8 +4,8 @@ import json
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
-from pages.base import BasePage
-from pages.element import PageElement
+from .base import BasePage
+from .element import PageElement
 
 
 class SettingsPage(BasePage):
@@ -26,7 +26,7 @@ class SettingsPage(BasePage):
             ]
 
     def _default_account_from_config(self, app: "App") -> str:
-        node_config = app.configs.get("node", {})
+        node_config = app.configs["node"]
         secret_hex = node_config.get("validator_secret_key")
         if not secret_hex:
             return ""
@@ -92,7 +92,7 @@ class SettingsPage(BasePage):
         self.elements = []
 
     def _handle_delete(self, app: "App") -> None:
-        node_config = app.configs.setdefault("node", {})
+        node_config = app.configs["node"]
         if "validation_secret_key" not in node_config:
             app.flash_message = "No validator key is configured."
             return
