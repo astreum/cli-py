@@ -1,5 +1,5 @@
 import logging
-import msvcrt
+import os
 import sys
 import threading
 import time
@@ -17,6 +17,13 @@ from modes.tui.pages.search import SearchPage
 from modes.tui.pages.settings import SettingsPage
 from modes.tui.pages.terminal import TerminalPage
 from modes.tui.pages.transaction import TransactionPage
+
+if os.name == "nt":
+    import msvcrt
+else:
+    import select
+    import termios
+    import tty
 
 HEADER_LINES = [
     " \u2588\u2588\u2588\u2588\u2588\u2557   \u2588\u2588\u2588\u2588\u2588\u2557  \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2557 \u2588\u2588\u2588\u2588\u2588\u2588\u2557  \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2557 \u2588\u2588\u2557   \u2588\u2588\u2557 \u2588\u2588\u2588\u2557   \u2588\u2588\u2588\u2557",
@@ -135,7 +142,11 @@ class App:
             'H': "up",
             'P': "down",
             'K': "left",
-            'M': "right"
+            'M': "right",
+            'A': "up",
+            'B': "down",
+            'D': "left",
+            'C': "right",
         }
         direction = direction_map.get(code)
         if direction is None:
@@ -236,6 +247,55 @@ class App:
         return page.elements[page.index]
 
 
+class KeyboardInput:
+    def __init__(self) -> None:
+        self._is_windows = os.name == "nt"
+        self._fd: Optional[int] = None
+        self._old_settings: Optional[List[Any]] = None
+
+    def __enter__(self) -> "KeyboardInput":
+        if not self._is_windows:
+            self._fd = sys.stdin.fileno()
+            self._old_settings = termios.tcgetattr(self._fd)
+            tty.setcbreak(self._fd)
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        if not self._is_windows and self._fd is not None and self._old_settings is not None:
+            termios.tcsetattr(self._fd, termios.TCSADRAIN, self._old_settings)
+
+    def read_event(self) -> Optional[Tuple[str, str]]:
+        if self._is_windows:
+            if not msvcrt.kbhit():
+                return None
+            key = msvcrt.getwch()
+            if key in ("\x00", "\xe0"):
+                extended = msvcrt.getwch()
+                return ("special", extended)
+            return ("char", key)
+
+        if self._fd is None:
+            return None
+
+        ready, _, _ = select.select([sys.stdin], [], [], 0)
+        if not ready:
+            return None
+
+        ch = sys.stdin.read(1)
+        if ch == "\x1b":
+            ready, _, _ = select.select([sys.stdin], [], [], 0)
+            if not ready:
+                return ("char", ch)
+            next_ch = sys.stdin.read(1)
+            if next_ch != "[":
+                return ("char", ch)
+            if not select.select([sys.stdin], [], [], 0)[0]:
+                return ("char", ch)
+            arrow = sys.stdin.read(1)
+            return ("special", arrow)
+        return ("char", ch)
+
+
 def run_tui(*, data_dir: Path, configs: dict[str, Any]) -> int:
     app = App(data_dir=data_dir, configs=configs)
 
@@ -249,46 +309,44 @@ def run_tui(*, data_dir: Path, configs: dict[str, Any]) -> int:
     render_time = time.time()
 
     try:
-        while not app.should_exit:
-            now = time.time()
-            updated = False
+        with KeyboardInput() as keyboard:
+            while not app.should_exit:
+                now = time.time()
+                updated = False
 
-            if app.log_event.is_set():
-                render_app(app, cursor_effect=app.cursor_effect_switch)
-                app.log_event.clear()
-
-            if app.input_focus:
-                
-                if now - render_time >= RENDER_SPEED:
+                if app.log_event.is_set():
                     render_app(app, cursor_effect=app.cursor_effect_switch)
-                    render_time = now
+                    app.log_event.clear()
 
-                if now - cursor_effect >= CURSOR_SPEED:
-                    app.cursor_effect_switch = not app.cursor_effect_switch
-                    cursor_effect = now
+                if app.input_focus:
+                    if now - render_time >= RENDER_SPEED:
+                        render_app(app, cursor_effect=app.cursor_effect_switch)
+                        render_time = now
+
+                    if now - cursor_effect >= CURSOR_SPEED:
+                        app.cursor_effect_switch = not app.cursor_effect_switch
+                        cursor_effect = now
+                        updated = True
+
+                event = keyboard.read_event()
+                if event is not None:
+                    kind, key = event
+                    if kind == "special":
+                        app.handle_special_key(key)
+                    elif key in ("\r", "\n"):
+                        app.handle_enter()
+                    elif key == "\x1b":
+                        app.handle_return()
+                    elif key in ("\x08", "\x7f"):
+                        app.handle_delete()
+                    else:
+                        app.handle_char(key)
                     updated = True
 
-            if msvcrt.kbhit():
-                key = msvcrt.getwch()
+                if updated:
+                    render_app(app, cursor_effect=app.cursor_effect_switch)
 
-                if key in ("\x00", "\xe0"):
-                    extended = msvcrt.getwch()
-                    app.handle_special_key(extended)
-                elif key in ("\r", "\n"):
-                    app.handle_enter()
-                elif key == "\x1b":
-                    app.handle_return()
-                elif key in ('\x08', '\x7f'):
-                    app.handle_delete()
-                else:
-                    app.handle_char(key)
-
-                updated = True
-
-            if updated:
-                render_app(app, cursor_effect=app.cursor_effect_switch)
-
-            time.sleep(0.01)
+                time.sleep(0.01)
 
     except KeyboardInterrupt:
         pass
