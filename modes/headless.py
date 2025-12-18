@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from astreum import Node
-from utils.config import persist_node_latest_block_hash
+from utils.config import persist_node_latest_block_hash, load_validator_private_key
 
 
 def run_headless(
@@ -39,8 +39,12 @@ def run_headless(
             sys.stdout.write("validating blockchain...\n")
             sys.stdout.flush()
             try:
-                node.validate()
-                sys.stdout.write("blockchain validation complete\n")
+                validator_key, error = load_validator_private_key(configs)
+                if validator_key is None:
+                    sys.stdout.write(f"blockchain validation skipped: {error}\n")
+                else:
+                    node.validate(validator_key)
+                    sys.stdout.write("blockchain validation complete\n")
                 sys.stdout.flush()
             except Exception as exc:  # pragma: no cover - best effort logging
                 sys.stdout.write(f"blockchain validation failed: {exc}\n")

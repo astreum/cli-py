@@ -7,7 +7,7 @@ from collections import deque
 from pathlib import Path
 from typing import Any, Deque, List, Optional, Tuple
 
-from utils.config import persist_node_latest_block_hash
+from utils.config import persist_node_latest_block_hash, load_validator_private_key
 from astreum import Node
 from modes.tui.render import render_app
 from modes.tui.pages.accounts.create import AccountCreatePage
@@ -127,8 +127,12 @@ class App:
         if cli_config.get("on_startup_validate_blockchain"):
             self.push_log_line("validating blockchain")
             try:
-                self.node.validate()
-                self.push_log_line("blockchain validation complete")
+                validator_key, error = load_validator_private_key(self.configs)
+                if validator_key is None:
+                    self.push_log_line(f"blockchain validation skipped: {error}")
+                else:
+                    self.node.validate(validator_key)
+                    self.push_log_line("blockchain validation complete")
             except Exception as exc:
                 self.push_log_line(f"blockchain validation failed: {exc}")
 

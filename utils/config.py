@@ -2,7 +2,9 @@ import json
 import os
 import platform
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
+
+from cryptography.hazmat.primitives.asymmetric import ed25519
 
 
 SETTINGS_FILE_NAME = "settings.json"
@@ -55,6 +57,28 @@ def save_config(data_dir: Path, config: dict[str, Any]) -> None:
         json.dumps(config, indent=2, sort_keys=True),
         encoding="utf-8",
     )
+
+
+def load_validator_private_key(
+    configs: dict[str, Any],
+) -> tuple[Optional[ed25519.Ed25519PrivateKey], Optional[str]]:
+    """Load the validator secret key from config, returning an error on failure."""
+    node_config = configs.get("node", {})
+    secret_hex = node_config.get("validation_secret_key")
+    if not secret_hex:
+        return None, "validation secret key is not configured"
+
+    try:
+        secret_bytes = bytes.fromhex(secret_hex)
+    except ValueError:
+        return None, "validation secret key is not valid hex"
+
+    try:
+        private_key = ed25519.Ed25519PrivateKey.from_private_bytes(secret_bytes)
+    except ValueError:
+        return None, "validation secret key is not a valid Ed25519 key"
+
+    return private_key, None
 
 
 def persist_node_latest_block_hash(
