@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from utils.config import persist_node_latest_block_hash
+from utils.latest_block import start_latest_block_hash_poller
 from astreum import Node, Expr
 from modes.evaluation.script import load_script_to_environment
 
@@ -16,6 +17,12 @@ def eval_lang(
     configs: dict[str, Any],
 ) -> int:
     node = Node(configs["node"])
+    poll_interval = configs["cli"]["latest_block_hash_poll_interval"]
+    stop_poller = start_latest_block_hash_poller(
+        node=node,
+        data_dir=data_dir,
+        poll_interval=poll_interval,
+    )
 
     evaluated_expr = None
     env_id: Optional[uuid.UUID] = None
@@ -39,13 +46,13 @@ def eval_lang(
                 sys.stdout.flush()
                 return 1
     finally:
+        stop_poller()
         if env_id is not None:
             node.environments.pop(env_id, None)
         latest_hash = node.latest_block_hash
         if latest_hash is not None:
             persist_node_latest_block_hash(
                 data_dir=data_dir,
-                configs=configs,
                 latest_block_hash=latest_hash,
             )
 

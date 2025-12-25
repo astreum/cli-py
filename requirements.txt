@@ -1,1 +1,1 @@
-astreum==0.3.11
+astreum==0.3.19

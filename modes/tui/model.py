@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Deque, List, Optional, Tuple
 
 from utils.config import persist_node_latest_block_hash, load_validator_private_key
+from utils.latest_block import start_latest_block_hash_poller
 from astreum import Node
 from modes.tui.render import render_app
 from modes.tui.pages.accounts.create import AccountCreatePage
@@ -69,6 +70,12 @@ class App:
         self.data_dir = data_dir
         self.configs = configs
         self.node = Node(config=self.configs["node"])
+        poll_interval = self.configs["cli"]["latest_block_hash_poll_interval"]
+        self.stop_latest_block_poller = start_latest_block_hash_poller(
+            node=self.node,
+            data_dir=self.data_dir,
+            poll_interval=poll_interval,
+        )
         
         self.header_block = HEADER_LINES
         self.footer_text = f"\x1b[90m{FOOTER_TEXT}\x1b[0m"
@@ -355,11 +362,12 @@ def run_tui(*, data_dir: Path, configs: dict[str, Any]) -> int:
     except KeyboardInterrupt:
         pass
     finally:
+        if hasattr(app, "stop_latest_block_poller"):
+            app.stop_latest_block_poller()
         latest_hash = app.node.latest_block_hash
         if latest_hash is not None:
             persist_node_latest_block_hash(
                 data_dir=app.data_dir,
-                configs=app.configs,
                 latest_block_hash=latest_hash,
             )
         sys.stdout.write(f"\033[?1049l\033[?25h")

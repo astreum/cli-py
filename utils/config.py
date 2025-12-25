@@ -1,6 +1,4 @@
 import json
-import os
-import platform
 from pathlib import Path
 from typing import Any, Optional
 
@@ -8,6 +6,7 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 
 
 SETTINGS_FILE_NAME = "settings.json"
+LATEST_BLOCK_HASH_FILE_NAME = "latest_block_hash.bin"
 
 
 def load_config(data_dir: Path) -> dict[str, Any]:
@@ -28,6 +27,7 @@ def load_config(data_dir: Path) -> dict[str, Any]:
         "serve_api": False,
         "on_startup_connect_node": False,
         "on_startup_validate_blockchain": False,
+        "latest_block_hash_poll_interval": 10.0,
     }
     
     for k, v in default_cli_configs.items():
@@ -38,12 +38,14 @@ def load_config(data_dir: Path) -> dict[str, Any]:
         "verbose": True,
         # "validation_secret_key": None,
         "cold_storage_path": str(data_dir / "atoms"),
-        "latest_block_hash": None,
     }
 
     for k, v in default_node_configs.items():
         if k not in config["node"]:
             config["node"][k] = v
+
+    if "latest_block_hash" in config["node"]:
+        config["node"].pop("latest_block_hash", None)
 
     save_config(data_dir, config)
 
@@ -81,17 +83,30 @@ def load_validator_private_key(
     return private_key, None
 
 
+def load_node_latest_block_hash(data_dir: Path) -> Optional[bytes]:
+    """Load the latest block hash from the local state file if available."""
+    state_path = data_dir / LATEST_BLOCK_HASH_FILE_NAME
+    if not state_path.exists():
+        return None
+    data = state_path.read_bytes()
+    if not data:
+        return None
+    return data
+
+
 def persist_node_latest_block_hash(
     data_dir: Path,
-    configs: dict[str, Any],
     latest_block_hash: bytes,
 ) -> None:
-    """Persist the latest block hash provided to the stored config."""
-    hex_value = f"0x{latest_block_hash.hex()}"
+    """Persist the latest block hash to the local state file."""
+    state_path = data_dir / LATEST_BLOCK_HASH_FILE_NAME
+    if state_path.exists():
+        try:
+            if state_path.read_bytes() == latest_block_hash:
+                return
+        except OSError:
+            pass
 
-    node_configs = configs.setdefault("node", {})
-    if node_configs.get("latest_block_hash") == hex_value:
-        return
-
-    node_configs["latest_block_hash"] = hex_value
-    save_config(data_dir, configs)
+    tmp_path = state_path.with_name(f"{LATEST_BLOCK_HASH_FILE_NAME}.tmp")
+    tmp_path.write_bytes(latest_block_hash)
+    tmp_path.replace(state_path)

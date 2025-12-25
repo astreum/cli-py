@@ -7,6 +7,7 @@ from typing import Any
 
 from astreum import Node
 from utils.config import persist_node_latest_block_hash, load_validator_private_key
+from utils.latest_block import start_latest_block_hash_poller
 
 
 def run_headless(
@@ -17,6 +18,12 @@ def run_headless(
     """Run the CLI in headless mode without launching the TUI."""
 
     node = Node(config=configs["node"])
+    poll_interval = configs["cli"]["latest_block_hash_poll_interval"]
+    stop_poller = start_latest_block_hash_poller(
+        node=node,
+        data_dir=data_dir,
+        poll_interval=poll_interval,
+    )
 
     connect_node = configs["cli"]["on_startup_connect_node"]
     validate_blockchain = configs["cli"]["on_startup_validate_blockchain"]
@@ -50,13 +57,13 @@ def run_headless(
                 sys.stdout.write(f"blockchain validation failed: {exc}\n")
                 sys.stdout.flush()
     finally:
+        stop_poller()
         if wait_for_disconnect:
             _wait_until_node_disconnects(node)
         latest_hash = node.latest_block_hash
         if latest_hash is not None:
             persist_node_latest_block_hash(
                 data_dir=data_dir,
-                configs=configs,
                 latest_block_hash=latest_hash,
             )
 

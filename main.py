@@ -3,7 +3,7 @@ from typing import Any, List, Optional
 from modes.headless import run_headless
 from modes.evaluation.language import eval_lang
 from modes.tui import run_tui
-from utils.config import load_config
+from utils.config import load_config, load_node_latest_block_hash
 from utils.data import ensure_data_dir
 
 def build_parser() -> argparse.ArgumentParser:
@@ -133,6 +133,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     data_dir = ensure_data_dir()
     configs = load_config(data_dir)
     _apply_config_overrides(configs, config_overrides)
+    configs.setdefault("node", {}).pop("latest_block_hash", None)
+    latest_hash = load_node_latest_block_hash(data_dir)
+    if latest_hash is not None:
+        configs["node"]["latest_block_hash"] = latest_hash
     if args.headless_mode:
         return run_headless(
             data_dir=data_dir,
