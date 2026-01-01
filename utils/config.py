@@ -1,4 +1,5 @@
 import json
+import logging
 from pathlib import Path
 from typing import Any, Optional
 
@@ -27,6 +28,7 @@ def load_config(data_dir: Path) -> dict[str, Any]:
         "serve_api": False,
         "on_startup_connect_node": False,
         "on_startup_validate_blockchain": False,
+        "on_startup_verify_blockchain": False,
         "latest_block_hash_poll_interval": 10.0,
     }
     
@@ -97,6 +99,7 @@ def load_node_latest_block_hash(data_dir: Path) -> Optional[bytes]:
 def persist_node_latest_block_hash(
     data_dir: Path,
     latest_block_hash: bytes,
+    logger: Optional[logging.Logger] = None,
 ) -> None:
     """Persist the latest block hash to the local state file."""
     state_path = data_dir / LATEST_BLOCK_HASH_FILE_NAME
@@ -110,3 +113,16 @@ def persist_node_latest_block_hash(
     tmp_path = state_path.with_name(f"{LATEST_BLOCK_HASH_FILE_NAME}.tmp")
     tmp_path.write_bytes(latest_block_hash)
     tmp_path.replace(state_path)
+    if logger is not None:
+        hash_hex = None
+        if isinstance(latest_block_hash, (bytes, bytearray)):
+            hash_hex = latest_block_hash.hex()
+        else:
+            try:
+                hash_hex = bytes(latest_block_hash).hex()
+            except Exception:
+                hash_hex = None
+        if hash_hex is None:
+            logger.info("Saved latest_block_hash to %s", state_path)
+        else:
+            logger.info("Saved latest_block_hash to %s (0x%s)", state_path, hash_hex)

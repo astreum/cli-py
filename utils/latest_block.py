@@ -23,6 +23,7 @@ def start_latest_block_hash_poller(
         last_written: Optional[bytes] = None
         minimum_interval = 0.05
         interval = max(poll_interval, minimum_interval)
+        logger = node.logger
         while not stop_event.is_set():
             try:
                 current = getattr(node, "latest_block_hash", None)
@@ -30,6 +31,7 @@ def start_latest_block_hash_poller(
                     persist_node_latest_block_hash(
                         data_dir=data_dir,
                         latest_block_hash=current,
+                        logger=logger,
                     )
                     last_written = current
             except Exception:

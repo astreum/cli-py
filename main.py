@@ -136,7 +136,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     configs.setdefault("node", {}).pop("latest_block_hash", None)
     latest_hash = load_node_latest_block_hash(data_dir)
     if latest_hash is not None:
-        configs["node"]["latest_block_hash"] = latest_hash
+        configs["node"]["latest_block_hash"] = f"0x{latest_hash.hex()}"
     if args.headless_mode:
         return run_headless(
             data_dir=data_dir,

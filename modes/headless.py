@@ -27,6 +27,7 @@ def run_headless(
 
     connect_node = configs["cli"]["on_startup_connect_node"]
     validate_blockchain = configs["cli"]["on_startup_validate_blockchain"]
+    verify_blockchain = configs["cli"]["on_startup_verify_blockchain"]
 
     wait_for_disconnect = False
     try:
@@ -56,6 +57,18 @@ def run_headless(
             except Exception as exc:  # pragma: no cover - best effort logging
                 sys.stdout.write(f"blockchain validation failed: {exc}\n")
                 sys.stdout.flush()
+
+        if verify_blockchain:
+            sys.stdout.write("verifying blockchain...\n")
+            sys.stdout.flush()
+            try:
+                node.verify()
+                sys.stdout.write("blockchain verification started\n")
+                sys.stdout.flush()
+                wait_for_disconnect = True
+            except Exception as exc:  # pragma: no cover - best effort logging
+                sys.stdout.write(f"blockchain verification failed: {exc}\n")
+                sys.stdout.flush()
     finally:
         stop_poller()
         if wait_for_disconnect:
@@ -65,6 +78,7 @@ def run_headless(
             persist_node_latest_block_hash(
                 data_dir=data_dir,
                 latest_block_hash=latest_hash,
+                logger=node.logger,
             )
 
     return 0

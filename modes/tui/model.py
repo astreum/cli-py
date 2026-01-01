@@ -143,6 +143,14 @@ class App:
             except Exception as exc:
                 self.push_log_line(f"blockchain validation failed: {exc}")
 
+        if cli_config.get("on_startup_verify_blockchain"):
+            self.push_log_line("verifying blockchain")
+            try:
+                self.node.verify()
+                self.push_log_line("blockchain verification started")
+            except Exception as exc:
+                self.push_log_line(f"blockchain verification failed: {exc}")
+
     def push_log_line(self, message: str) -> None:
         clean = " ".join(message.split())
         self.log_lines.append(clean)
@@ -369,6 +377,7 @@ def run_tui(*, data_dir: Path, configs: dict[str, Any]) -> int:
             persist_node_latest_block_hash(
                 data_dir=app.data_dir,
                 latest_block_hash=latest_hash,
+                logger=app.node.logger,
             )
         sys.stdout.write(f"\033[?1049l\033[?25h")
         sys.stdout.flush()

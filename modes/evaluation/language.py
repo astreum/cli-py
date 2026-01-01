@@ -54,6 +54,7 @@ def eval_lang(
             persist_node_latest_block_hash(
                 data_dir=data_dir,
                 latest_block_hash=latest_hash,
+                logger=node.logger,
             )
 
     if evaluated_expr is not None:
