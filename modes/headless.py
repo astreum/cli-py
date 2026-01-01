@@ -19,7 +19,7 @@ def run_headless(
 
     node = Node(config=configs["node"])
     poll_interval = configs["cli"]["latest_block_hash_poll_interval"]
-    stop_poller = start_latest_block_hash_poller(
+    stop_latest_block_hash_poller = start_latest_block_hash_poller(
         node=node,
         data_dir=data_dir,
         poll_interval=poll_interval,
@@ -70,9 +70,9 @@ def run_headless(
                 sys.stdout.write(f"blockchain verification failed: {exc}\n")
                 sys.stdout.flush()
     finally:
-        stop_poller()
         if wait_for_disconnect:
             _wait_until_node_disconnects(node)
+        stop_latest_block_hash_poller()
         latest_hash = node.latest_block_hash
         if latest_hash is not None:
             persist_node_latest_block_hash(

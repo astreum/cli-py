@@ -18,7 +18,7 @@ def eval_lang(
 ) -> int:
     node = Node(configs["node"])
     poll_interval = configs["cli"]["latest_block_hash_poll_interval"]
-    stop_poller = start_latest_block_hash_poller(
+    stop_latest_block_hash_poller = start_latest_block_hash_poller(
         node=node,
         data_dir=data_dir,
         poll_interval=poll_interval,
@@ -46,7 +46,7 @@ def eval_lang(
                 sys.stdout.flush()
                 return 1
     finally:
-        stop_poller()
+        stop_latest_block_hash_poller()
         if env_id is not None:
             node.environments.pop(env_id, None)
         latest_hash = node.latest_block_hash
