@@ -6,6 +6,8 @@ from modes.tui import run_tui
 from utils.config import load_config, load_node_latest_block_hash
 from utils.data import ensure_data_dir
 
+_ARG_UNSET = object()
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Astreum CLI")
     
@@ -33,6 +35,13 @@ def build_parser() -> argparse.ArgumentParser:
         type=str,
         help="Postfix expression to evaluate (e.g., '(a b main)')",
         default=None,
+    )
+    parser.add_argument(
+        "--node-default-seed",
+        nargs="?",
+        const="none",
+        default=_ARG_UNSET,
+        help="Override the node default seed; omit value (or use 'none') to clear.",
     )
     return parser
 
@@ -122,6 +131,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser = build_parser()
     args, unknown_args = parser.parse_known_args(argv)
     config_overrides = _parse_config_overrides(parser, unknown_args)
+    if args.node_default_seed is not _ARG_UNSET:
+        config_overrides["node"]["default_seed"] = _coerce_config_value(
+            args.node_default_seed
+        )
 
     selected_modes = sum(
         bool(flag)

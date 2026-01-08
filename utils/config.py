@@ -26,8 +26,8 @@ def load_config(data_dir: Path) -> dict[str, Any]:
 
     default_cli_configs = {
         "serve_api": False,
-        "on_startup_connect_node": False,
-        "on_startup_validate_blockchain": False,
+        "on_startup_connect_node": True,
+        "on_startup_validate_blockchain": True,
         "on_startup_verify_blockchain": False,
         "latest_block_hash_poll_interval": 10.0,
     }
