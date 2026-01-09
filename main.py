@@ -1,4 +1,5 @@
 import argparse
+import sys
 from typing import Any, List, Optional
 from modes.headless import run_headless
 from modes.evaluation.language import eval_lang
@@ -150,6 +151,10 @@ def main(argv: Optional[List[str]] = None) -> int:
         configs["node"]["latest_block_hash"] = f"0x{latest_hash.hex()}"
     
     if args.headless_mode:
+        cli_args = argv if argv is not None else sys.argv[1:]
+        sys.stdout.write(f"cli args: {cli_args}\n")
+        sys.stdout.write(f"node config: {configs.get('node', {})}\n")
+        sys.stdout.flush()
         return run_headless(
             data_dir=data_dir,
             configs=configs,
