@@ -6,8 +6,6 @@ from modes.tui import run_tui
 from utils.config import load_config, load_node_latest_block_hash
 from utils.data import ensure_data_dir
 
-_ARG_UNSET = object()
-
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Astreum CLI")
     
@@ -38,10 +36,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--node-default-seed",
-        nargs="?",
-        const="none",
-        default=_ARG_UNSET,
-        help="Override the node default seed; omit value (or use 'none') to clear.",
+        type=str,
+        default=None,
+        help="Override the node default seed; use 'none' or 'null' to clear.",
     )
     return parser
 
@@ -131,7 +128,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser = build_parser()
     args, unknown_args = parser.parse_known_args(argv)
     config_overrides = _parse_config_overrides(parser, unknown_args)
-    if args.node_default_seed is not _ARG_UNSET:
+    
+    if args.node_default_seed is not None:
         config_overrides["node"]["default_seed"] = _coerce_config_value(
             args.node_default_seed
         )
@@ -146,10 +144,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     data_dir = ensure_data_dir()
     configs = load_config(data_dir)
     _apply_config_overrides(configs, config_overrides)
-    configs.setdefault("node", {}).pop("latest_block_hash", None)
+    
     latest_hash = load_node_latest_block_hash(data_dir)
     if latest_hash is not None:
         configs["node"]["latest_block_hash"] = f"0x{latest_hash.hex()}"
+    
     if args.headless_mode:
         return run_headless(
             data_dir=data_dir,

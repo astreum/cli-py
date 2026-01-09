@@ -80,7 +80,7 @@ Run headless startup actions from the saved `cli.*` settings:
 python main.py --headless
 ```
 
-Override saved CLI and node settings for a single invocation with `--cli-*` / `--node-*` flags (works with `--tui`, `--eval`, or `--headless`; kebab-case maps to config keys; boolean flags default to `true` when no value is provided). `--node-default-seed` accepts an optional value; omit it (or use `none`) to clear the default seed for that run:
+Override saved CLI and node settings for a single invocation with `--cli-*` / `--node-*` flags (works with `--tui`, `--eval`, or `--headless`; kebab-case maps to config keys; boolean flags default to `true` when no value is provided). `--node-default-seed` accepts a value; use `none` or `null` to clear the default seed for that run:
 ```bash
 python main.py --headless --cli-on-startup-connect-node --cli-on-startup-validate-blockchain
 ```
