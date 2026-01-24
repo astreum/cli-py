@@ -11,7 +11,7 @@ LATEST_BLOCK_HASH_FILE_NAME = "latest_block_hash.bin"
 
 
 def load_config(data_dir: Path) -> dict[str, Any]:
-    """Load or create the app configuration stored in `settings.json`."""
+    """Load the app configuration stored in `settings.json` if present."""
     config = {}
 
     settings_path = data_dir / SETTINGS_FILE_NAME
@@ -37,7 +37,6 @@ def load_config(data_dir: Path) -> dict[str, Any]:
             config["cli"][k] = v
 
     default_node_configs = {
-        "verbose": True,
         # "validation_secret_key": None,
         "cold_storage_path": str(data_dir / "atoms"),
     }
@@ -48,8 +47,6 @@ def load_config(data_dir: Path) -> dict[str, Any]:
 
     if "latest_block_hash" in config["node"]:
         config["node"].pop("latest_block_hash", None)
-
-    save_config(data_dir, config)
 
     return config
 

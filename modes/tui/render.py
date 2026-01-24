@@ -24,7 +24,7 @@ def draw(app: "App"):
     sys.stdout.flush()
 
 def render_app(app, cursor_effect: bool = False) -> None:
-    """Render the shared header/body/footer layout for an app instance."""
+    """Render the shared header/body layout for an app instance."""
     lines: List[str] = ["","",""]
 
     lines.extend(app.header_block)
@@ -46,15 +46,6 @@ def render_app(app, cursor_effect: bool = False) -> None:
         (body_start, body_start + len(body_lines) - 1) if body_lines else None
     )
     lines.append("")
-
-    footer_start = len(lines)
-    lines.append(app.footer_text)
-    footer_logs = list(getattr(app, "log_lines", []))
-    while len(footer_logs) < 5:
-        footer_logs.append("")
-    prefixed_logs = [f"| {entry}" if entry else "| " for entry in footer_logs[:5]]
-    lines.extend(prefixed_logs)
-    app.footer_lines = (footer_start, footer_start + 4)
 
     app.lines = lines
 

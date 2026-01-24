@@ -48,7 +48,7 @@ A Command-line interface for interacting with the Astreum blockchain written in 
 - **Evaluation mode** (`--eval`): evaluate Astreum language scripts / postfix expressions.
 - **Headless mode** (`--headless`): run startup actions without launching the TUI (handy for automation).
 
-Settings persist to `settings.json` in the app data directory:
+Settings persist to `settings.json` in the app data directory when saved from the TUI:
 
 - Windows: `%APPDATA%\Astreum\cli-py\settings.json`
 - macOS/Linux: `$XDG_DATA_HOME/Astreum/cli-py/settings.json` (defaults to `~/.local/share/Astreum/cli-py/settings.json`)
@@ -75,7 +75,7 @@ python main.py --eval --script "./add_script.aex" --expr "(a b main)"
 ```
 
 ### Headless mode
-Run headless startup actions from the saved `cli.*` settings:
+Run headless startup actions from saved `cli.*` settings (if present):
 ```bash
 python main.py --headless
 ```
