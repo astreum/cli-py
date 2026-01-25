@@ -7,6 +7,7 @@ from typing import Any
 
 from astreum import Node
 from utils.config import persist_node_latest_block_hash, load_validator_private_key
+from utils.forks import load_node_forks, persist_node_forks
 from utils.latest_block import start_latest_block_hash_poller
 
 
@@ -14,22 +15,15 @@ def run_headless(
     *,
     data_dir: Path,
     configs: dict[str, Any],
+    node: Node,
 ) -> int:
     """Run the CLI in headless mode without launching the TUI."""
-
-    node = Node(config=configs["node"])
-    poll_interval = configs["cli"]["latest_block_hash_poll_interval"]
-    stop_latest_block_hash_poller = start_latest_block_hash_poller(
-        node=node,
-        data_dir=data_dir,
-        poll_interval=poll_interval,
-    )
-
     connect_node = configs["cli"]["on_startup_connect_node"]
     validate_blockchain = configs["cli"]["on_startup_validate_blockchain"]
     verify_blockchain = configs["cli"]["on_startup_verify_blockchain"]
 
     wait_for_disconnect = False
+    stop_latest_block_hash_poller = None
     try:
         if connect_node:
             sys.stdout.write("connecting node...\n")
@@ -69,10 +63,18 @@ def run_headless(
             except Exception as exc:  # pragma: no cover - best effort logging
                 sys.stdout.write(f"blockchain verification failed: {exc}\n")
                 sys.stdout.flush()
+        load_node_forks(data_dir=data_dir, node=node)
+        poll_interval = configs["cli"]["latest_block_hash_poll_interval"]
+        stop_latest_block_hash_poller = start_latest_block_hash_poller(
+            node=node,
+            data_dir=data_dir,
+            poll_interval=poll_interval,
+        )
     finally:
         if wait_for_disconnect:
             _wait_until_node_disconnects(node)
-        stop_latest_block_hash_poller()
+        if stop_latest_block_hash_poller is not None:
+            stop_latest_block_hash_poller()
         latest_hash = node.latest_block_hash
         if latest_hash is not None:
             persist_node_latest_block_hash(
@@ -80,6 +82,7 @@ def run_headless(
                 latest_block_hash=latest_hash,
                 logger=node.logger,
             )
+        persist_node_forks(data_dir=data_dir, node=node)
 
     return 0
 

@@ -44,10 +44,10 @@ class App:
     body_lines: Optional[Tuple[int, int]]
     flash_message: None
 
-    def __init__(self, *, data_dir: Path, configs: dict[str, Any]) -> None:
+    def __init__(self, *, data_dir: Path, configs: dict[str, Any], node: Node) -> None:
         self.data_dir = data_dir
         self.configs = configs
-        self.node = Node(config=self.configs["node"])
+        self.node = node
         poll_interval = self.configs["cli"]["latest_block_hash_poll_interval"]
         self.stop_latest_block_poller = start_latest_block_hash_poller(
             node=self.node,
@@ -264,8 +264,8 @@ class KeyboardInput:
         return ("char", ch)
 
 
-def run_tui(*, data_dir: Path, configs: dict[str, Any]) -> int:
-    app = App(data_dir=data_dir, configs=configs)
+def run_tui(*, data_dir: Path, configs: dict[str, Any], node: Node) -> int:
+    app = App(data_dir=data_dir, configs=configs, node=node)
 
     sys.stdout.write(f"\033[?1049h\033[?25l")
     sys.stdout.flush()

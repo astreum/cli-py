@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Optional, Callable
 
 from utils.config import persist_node_latest_block_hash
+from utils.forks import persist_node_forks
 
 
 def start_latest_block_hash_poller(
@@ -33,6 +34,7 @@ def start_latest_block_hash_poller(
                         latest_block_hash=current,
                         logger=logger,
                     )
+                    persist_node_forks(data_dir=data_dir, node=node)
                     last_written = current
             except Exception:
                 # best-effort; continue polling

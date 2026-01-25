@@ -1,6 +1,8 @@
 import argparse
 import sys
 from typing import Any, List, Optional
+
+from astreum import Node
 from modes.headless import run_headless
 from modes.evaluation.language import eval_lang
 from modes.tui import run_tui
@@ -149,6 +151,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     latest_hash = load_node_latest_block_hash(data_dir)
     if latest_hash is not None:
         configs["node"]["latest_block_hash"] = f"0x{latest_hash.hex()}"
+
+    node = Node(config=configs["node"])
     
     if args.headless_mode:
         cli_args = argv if argv is not None else sys.argv[1:]
@@ -158,9 +162,10 @@ def main(argv: Optional[List[str]] = None) -> int:
         return run_headless(
             data_dir=data_dir,
             configs=configs,
+            node=node,
         )
     elif args.tui_mode:
-        return run_tui(data_dir=data_dir, configs=configs)
+        return run_tui(data_dir=data_dir, configs=configs, node=node)
     
     elif args.eval_mode:
         return eval_lang(
@@ -168,6 +173,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             entry_expr_str=args.expr,
             data_dir=data_dir,
             configs=configs,
+            node=node,
         )
 
 

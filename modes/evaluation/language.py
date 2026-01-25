@@ -15,8 +15,8 @@ def eval_lang(
     entry_expr_str: Optional[str],
     data_dir: Path,
     configs: dict[str, Any],
+    node: Node,
 ) -> int:
-    node = Node(configs["node"])
     poll_interval = configs["cli"]["latest_block_hash_poll_interval"]
     stop_latest_block_hash_poller = start_latest_block_hash_poller(
         node=node,
