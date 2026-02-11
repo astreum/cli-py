@@ -69,12 +69,12 @@ class App:
         self.active_view = "menu"
         self.previous_view = None
         self.input_focus = False
-        self.cursor_effect_switch = False
 
         self.lines = []
         self.line_offset = 0
         self.header_lines = None
         self.flash_message = None
+        self.cursor_position = None
         self._run_cli_startup_actions()
         
         self.should_exit = False
@@ -149,7 +149,6 @@ class App:
                 element.handle_input_enter()
 
             else:
-                self.cursor_effect_switch = True
                 self.input_focus = True
 
         elif element.next:
@@ -173,7 +172,6 @@ class App:
             self.flash_message = None
             
         if self.input_focus:
-            self.cursor_effect_switch = False
             self.input_focus = False
         
         # elif self.previous_view:
@@ -271,26 +269,10 @@ def run_tui(*, data_dir: Path, configs: dict[str, Any], node: Node) -> int:
     sys.stdout.flush()
     render_app(app)
 
-    cursor_effect = time.time()
-    CURSOR_SPEED = 0.5
-    RENDER_SPEED = 0.03
-    render_time = time.time()
-
     try:
         with KeyboardInput() as keyboard:
             while not app.should_exit:
-                now = time.time()
                 updated = False
-
-                if app.input_focus:
-                    if now - render_time >= RENDER_SPEED:
-                        render_app(app, cursor_effect=app.cursor_effect_switch)
-                        render_time = now
-
-                    if now - cursor_effect >= CURSOR_SPEED:
-                        app.cursor_effect_switch = not app.cursor_effect_switch
-                        cursor_effect = now
-                        updated = True
 
                 event = keyboard.read_event()
                 if event is not None:
@@ -308,7 +290,7 @@ def run_tui(*, data_dir: Path, configs: dict[str, Any], node: Node) -> int:
                     updated = True
 
                 if updated:
-                    render_app(app, cursor_effect=app.cursor_effect_switch)
+                    render_app(app)
 
                 time.sleep(0.01)
 

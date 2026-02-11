@@ -19,33 +19,28 @@ class PageElement:
         self.next = next
         self.body = body
 
-    def render(self, focus: bool = False, cursor_effect: bool = False) -> List[str]:
+    def render(self, focus: bool = False) -> List[str]:
         prefix = "> " if focus else "  "
         lines: List[str] = [f"{prefix}{self.label}"]
 
         if self.input:
-            for row, line in enumerate(self.input):
-                rendered_line = line
-
-                if focus and row == self.input_index[0]:
-                    col = self.input_index[1]
-
-                    if 0 <= col <= len(line):
-                        if cursor_effect:
-                            if col < len(line):
-                                rendered_line = f"{line[:col]}_{line[col+1:]}"
-                            elif col == len(line):
-                                rendered_line = f"{line}_"
-                            else:
-                                rendered_line = f"{line}"
-
-                lines.append(f"  {rendered_line}")
+            for line in self.input:
+                lines.append(f"  {line}")
 
         if self.body:
             for line in self.body.split("\n"):
                 lines.append(f"  {line}")
 
         return lines
+
+    def cursor_offset(self) -> Optional[Tuple[int, int]]:
+        if not self.input:
+            return None
+
+        row, col = self.input_index
+        row = max(0, min(row, len(self.input) - 1))
+        col = max(0, min(col, len(self.input[row])))
+        return (1 + row, 2 + col)
 
 
     def navigate_input(self, direction: str) -> bool:
