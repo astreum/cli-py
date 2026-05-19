@@ -25,7 +25,8 @@ def load_config(data_dir: Path) -> dict[str, Any]:
             config[k] = {}
 
     default_cli_configs = {
-        "serve_api": False,
+        "api_host": "127.0.0.1",
+        "api_port": 52781,
         "on_startup_connect_node": True,
         "on_startup_validate_blockchain": True,
         "on_startup_verify_blockchain": False,

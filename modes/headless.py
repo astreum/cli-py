@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import sys
+import threading
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
+
+import uvicorn
 
 from astreum import Node
 from utils.config import persist_node_latest_block_hash, load_validator_private_key
@@ -16,14 +19,25 @@ def run_headless(
     data_dir: Path,
     configs: dict[str, Any],
     node: Node,
+    api_host: Optional[str] = None,
+    api_port: Optional[int] = None,
 ) -> int:
-    """Run the CLI in headless mode without launching the TUI."""
+    """Run the CLI in headless mode without launching the TUI.
+
+    If *api_port* is set (via CLI flag or config file), starts an HTTP API
+    server on a daemon thread alongside the headless lifecycle.
+    """
     connect_node = configs["cli"]["on_startup_connect_node"]
     validate_blockchain = configs["cli"]["on_startup_validate_blockchain"]
     verify_blockchain = configs["cli"]["on_startup_verify_blockchain"]
 
+    # Resolve API host/port from CLI arg → config file default
+    api_host = api_host or configs["cli"].get("api_host")
+    api_port = api_port or configs["cli"].get("api_port")
+    serve_api = api_port is not None
+
     wait_for_disconnect = False
-    stop_latest_block_hash_poller = None
+    stop_latest_block_hash_poller_fn = None
     try:
         if connect_node:
             sys.stdout.write("connecting node...\n")
@@ -63,18 +77,45 @@ def run_headless(
             except Exception as exc:  # pragma: no cover - best effort logging
                 sys.stdout.write(f"blockchain verification failed: {exc}\n")
                 sys.stdout.flush()
+
         load_node_forks(data_dir=data_dir, node=node)
+
         poll_interval = configs["cli"]["latest_block_hash_poll_interval"]
-        stop_latest_block_hash_poller = start_latest_block_hash_poller(
+        stop_latest_block_hash_poller_fn = start_latest_block_hash_poller(
             node=node,
             data_dir=data_dir,
             poll_interval=poll_interval,
         )
+
+        # --- Start API server (if requested) ---
+        if serve_api:
+            from modes.api.server import set_node, app
+
+            # Use config host as fallback if CLI flag wasn't given
+            api_host = api_host or configs["cli"].get("api_host", "127.0.0.1")
+            set_node(node)
+
+            sys.stdout.write(f"starting API server on {api_host}:{api_port}\n")
+            sys.stdout.flush()
+
+            server_thread = threading.Thread(
+                target=uvicorn.run,
+                kwargs={
+                    "app": app,
+                    "host": api_host,
+                    "port": api_port,
+                    "log_level": "warning",
+                },
+                daemon=True,
+                name="astreum-api",
+            )
+            server_thread.start()
+
     finally:
         if wait_for_disconnect:
             _wait_until_node_disconnects(node)
-        if stop_latest_block_hash_poller is not None:
-            stop_latest_block_hash_poller()
+        if stop_latest_block_hash_poller_fn is not None:
+            stop_latest_block_hash_poller_fn()
         latest_hash = node.latest_block_hash
         if latest_hash is not None:
             persist_node_latest_block_hash(

@@ -30,6 +30,20 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Enable evaluation mode instead of launching the GUI",
     )
+    parser.add_argument(
+        "--api-port",
+        dest="api_port",
+        type=int,
+        default=None,
+        help="Start HTTP API server on the given port (used with --headless)",
+    )
+    parser.add_argument(
+        "--api-host",
+        dest="api_host",
+        type=str,
+        default=None,
+        help="Host for the API server (default: 127.0.0.1, used with --headless)",
+    )
     parser.add_argument("--script", type=str, help="Path to a script file", default=None)
     parser.add_argument(
         "--expr",
@@ -163,6 +177,8 @@ def main(argv: Optional[List[str]] = None) -> int:
             data_dir=data_dir,
             configs=configs,
             node=node,
+            api_host=args.api_host,
+            api_port=args.api_port,
         )
     elif args.tui_mode:
         return run_tui(data_dir=data_dir, configs=configs, node=node)

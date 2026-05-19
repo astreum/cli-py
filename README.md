@@ -42,11 +42,11 @@ A Command-line interface for interacting with the Astreum blockchain written in 
 
 ## Usage
 
-`cli-py` has three mutually exclusive modes (pick one):
+`cli-py` has four mutually exclusive modes (pick one):
 
 - **TUI mode** (`--tui`): interactive terminal UI.
 - **Evaluation mode** (`--eval`): evaluate Astreum language scripts / postfix expressions.
-- **Headless mode** (`--headless`): run startup actions without launching the TUI (handy for automation).
+- **Headless mode** (`--headless`): run startup actions without launching the TUI (handy for automation). Optionally start an HTTP API server with `--api-port`.
 
 Settings persist to `settings.json` in the app data directory when saved from the TUI:
 
@@ -93,4 +93,31 @@ python main.py --headless --node-verbose false --node-cold-storage-path "./atoms
 Disable the default seed:
 ```bash
 python main.py --headless --node-default-seed none
+```
+
+### Headless + API server
+
+Start the HTTP API server alongside headless mode on port 52781:
+
+```bash
+python main.py --headless --api-port 52781
+```
+
+Custom host:
+
+```bash
+python main.py --headless --api-port 52781 --api-host 0.0.0.0
+```
+
+Open `http://127.0.0.1:52781/docs` for the auto-generated Swagger UI to test all endpoints.
+
+Available endpoints:
+
+```
+GET /atom/{id}                    Single atom by blake3 hash
+GET /list/{id}                    Atom chain following next_id pointers
+GET /chain/{chain_id}             Latest block for a chain (or null)
+GET /block/{id}                   Full block by atom hash
+GET /block/{id}/account/{addr}    Account state at a specific block
+GET /transaction/{id}             Transaction by atom hash
 ```
