@@ -24,16 +24,16 @@ A Command-line interface for interacting with the Astreum blockchain written in 
 
 1. Create a virtual environment:
    ```bash
-   python -m venv .venv
+   python -m venv venv
    ```
 2. Activate the virtual environment:
    - macOS/Linux:
      ```bash
-     source .venv/bin/activate
+     source venv/bin/activate
      ```
    - Windows (PowerShell):
      ```powershell
-     .\.venv\Scripts\Activate.ps1
+     .\venv\Scripts\Activate.ps1
      ```
 3. Install dependencies:
    ```bash
@@ -42,7 +42,7 @@ A Command-line interface for interacting with the Astreum blockchain written in 
 
 ## Usage
 
-`cli-py` has four mutually exclusive modes (pick one):
+`cli-py` has three mutually exclusive modes (pick one):
 
 - **TUI mode** (`--tui`): interactive terminal UI.
 - **Evaluation mode** (`--eval`): evaluate Astreum language scripts / postfix expressions.
