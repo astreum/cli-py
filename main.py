@@ -130,6 +130,8 @@ def _parse_config_overrides(
                 value = "true"
 
         normalized_key = key.replace("-", "_")
+        if normalized_key == "validation_secret_key":
+            normalized_key = "validation_secret_key_str"
         overrides[scope][normalized_key] = _coerce_config_value(value)
         idx += 1
 

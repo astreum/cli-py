@@ -66,7 +66,9 @@ def load_validator_private_key(
 ) -> tuple[Optional[ed25519.Ed25519PrivateKey], Optional[str]]:
     """Load the validator secret key from config, returning an error on failure."""
     node_config = configs.get("node", {})
-    secret_hex = node_config.get("validation_secret_key")
+    secret_hex = node_config.get("validation_secret_key_str")
+    if not secret_hex:
+        secret_hex = node_config.get("validation_secret_key")
     if not secret_hex:
         return None, "validation secret key is not configured"
 
