@@ -52,6 +52,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
     )
     parser.add_argument(
+        "--api",
+        dest="api_enabled",
+        action="store_true",
+        help="Enable the HTTP API server (default 127.0.0.1:52781)",
+    )
+    parser.add_argument(
         "--node-default-seed",
         type=str,
         default=None,
@@ -161,6 +167,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     data_dir = ensure_data_dir()
     configs = load_config(data_dir)
     _apply_config_overrides(configs, config_overrides)
+
+    if args.api_enabled:
+        if args.api_port is None:
+            args.api_port = configs.get("cli", {}).get("api_port", 52781)
+        if args.api_host is None:
+            args.api_host = configs.get("cli", {}).get("api_host", "127.0.0.1")
     
     latest_hash = load_node_latest_block_hash(data_dir)
     if latest_hash is not None:
