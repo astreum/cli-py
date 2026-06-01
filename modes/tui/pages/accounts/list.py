@@ -16,12 +16,11 @@ def load_accounts(data_dir: Optional[Path]) -> list[tuple[str, str]]:
         return []
 
     entries: list[tuple[str, str]] = []
-    for account_file in sorted(accounts_dir.glob("*.bin")):
+    for account_file in sorted(accounts_dir.glob("*.txt")):
         try:
-            private_bytes = account_file.read_bytes()
-        except OSError:
-            continue
-        if len(private_bytes) != 32:
+            private_hex = account_file.read_text().strip()
+            private_bytes = bytes.fromhex(private_hex)
+        except (OSError, ValueError):
             continue
         try:
             private_key = ed25519.Ed25519PrivateKey.from_private_bytes(private_bytes)

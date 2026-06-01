@@ -51,14 +51,15 @@ class SettingsPage(BasePage):
             return
 
         accounts_dir = app.data_dir / "accounts"
-        account_path = accounts_dir / f"{account_name}.bin"
+        account_path = accounts_dir / f"{account_name}.txt"
         if not account_path.exists():
             app.flash_message = f"Account '{account_name}' not found."
             return
 
         try:
-            private_bytes = account_path.read_bytes()
-        except OSError as exc:
+            private_hex = account_path.read_text().strip()
+            private_bytes = bytes.fromhex(private_hex)
+        except (OSError, ValueError) as exc:
             app.flash_message = f"Failed to read account '{account_name}': {exc}"
             return
 

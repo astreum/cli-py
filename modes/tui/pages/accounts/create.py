@@ -29,7 +29,7 @@ class AccountCreatePage(BasePage):
         
         slug = slugify(name)
 
-        candidate_path = accounts_dir / f"{slug}.bin"
+        candidate_path = accounts_dir / f"{slug}.txt"
 
         if candidate_path.exists():
             app.flash_message = f"Account name `{input[0]}` already in use!"
@@ -41,7 +41,7 @@ class AccountCreatePage(BasePage):
             encryption_algorithm=serialization.NoEncryption(),
         )
         try:
-            candidate_path.write_bytes(private_bytes)
+            candidate_path.write_text(private_bytes.hex())
         except OSError as exc:
             app.flash_message = f"Failed to save account: {exc}"
         
