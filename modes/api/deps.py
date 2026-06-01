@@ -7,7 +7,7 @@ from typing import Optional
 from fastapi import HTTPException
 
 from astreum.node import Node
-from astreum.storage.models.atom import Atom, AtomKind, ZERO32
+from astreum.machine.models.expression import Expr, ZERO32
 
 _node: Optional[Node] = None
 
@@ -32,18 +32,17 @@ def hex_encode(b: Optional[bytes]) -> Optional[str]:
     return b.hex()
 
 
-_kind_label = {
-    AtomKind.SYMBOL: "symbol",
-    AtomKind.BYTES: "bytes",
-    AtomKind.LIST: "list",
-}
-
-
-def serialize_atom(atom: Atom) -> dict:
-    return {
-        "id": atom.object_id().hex(),
-        "kind": _kind_label.get(atom.kind, str(atom.kind.value)),
-        "data": atom.data.hex(),
-        "next_id": atom.next_id.hex(),
-        "size": atom.size,
-    }
+def serialize_expr(expr: Expr) -> dict:
+    """Serialize an Expr to a JSON-compatible dict."""
+    if isinstance(expr, Expr.Symbol):
+        return {"type": "symbol", "value": expr.value}
+    if isinstance(expr, Expr.Bytes):
+        return {"type": "bytes", "value": expr.value.hex(), "size": expr.size()}
+    if isinstance(expr, Expr.Link):
+        return {
+            "type": "link",
+            "head_hash": (expr.head_hash or expr.head.hash()).hex(),
+            "tail_hash": (expr.tail_hash or expr.tail.hash()).hex(),
+            "size": expr.size(),
+        }
+    return {"type": "unknown"}

@@ -19,6 +19,7 @@ from .chain import router as chain_router
 from .block import router as block_router
 from .accounts import router as accounts_router
 from .transaction import router as transaction_router
+from .search import router as search_router
 
 logger = logging.getLogger("astreum.api")
 
@@ -40,3 +41,4 @@ app.include_router(chain_router)
 app.include_router(block_router)
 app.include_router(accounts_router)
 app.include_router(transaction_router)
+app.include_router(search_router)
