@@ -114,7 +114,7 @@ Open `http://127.0.0.1:52781/docs` for the auto-generated Swagger UI to test all
 Available endpoints:
 
 ```
-GET /atom/{id}                    Single expression by blake3 hash
+GET /expr/{id}                     Single expression by blake3 hash
 GET /list/{id}                    Expr list chain from root hash
 GET /chain/{chain_id}             Latest block for a chain (or null)
 GET /block/{id}                   Full block by atom hash

@@ -13,7 +13,7 @@ from .deps import require_node, serialize_expr
 router = APIRouter()
 
 
-@router.get("/atom/{atom_id}")
+@router.get("/expr/{atom_id}")
 def get_atom(atom_id: str, node=Depends(require_node)):
     """Return a single atom by its blake3 id (64-char hex)."""
     try:
