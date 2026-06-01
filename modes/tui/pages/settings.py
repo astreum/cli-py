@@ -58,7 +58,7 @@ class SettingsPage(BasePage):
 
         try:
             private_hex = account_path.read_text().strip()
-            private_bytes = bytes.fromhex(private_hex)
+            private_bytes = bytes.fromhex(private_hex.removeprefix("0x"))
         except (OSError, ValueError) as exc:
             app.flash_message = f"Failed to read account '{account_name}': {exc}"
             return

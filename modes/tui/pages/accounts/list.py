@@ -19,7 +19,7 @@ def load_accounts(data_dir: Optional[Path]) -> list[tuple[str, str]]:
     for account_file in sorted(accounts_dir.glob("*.txt")):
         try:
             private_hex = account_file.read_text().strip()
-            private_bytes = bytes.fromhex(private_hex)
+            private_bytes = bytes.fromhex(private_hex.removeprefix("0x"))
         except (OSError, ValueError):
             continue
         try:

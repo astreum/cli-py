@@ -41,7 +41,7 @@ class AccountCreatePage(BasePage):
             encryption_algorithm=serialization.NoEncryption(),
         )
         try:
-            candidate_path.write_text(private_bytes.hex())
+            candidate_path.write_text("0x" + private_bytes.hex())
         except OSError as exc:
             app.flash_message = f"Failed to save account: {exc}"
         
