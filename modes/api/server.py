@@ -13,7 +13,7 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
 from .deps import set_node as set_node     # re-exported for modes/headless.py
-from .atom import router as atom_router
+from .expr import router as expr_router
 from .list import router as list_router
 from .chain import router as chain_router
 from .block import router as block_router
@@ -35,7 +35,7 @@ async def value_error_handler(request, exc: ValueError):
     return JSONResponse(status_code=422, content={"detail": str(exc)})
 
 
-app.include_router(atom_router)
+app.include_router(expr_router)
 app.include_router(list_router)
 app.include_router(chain_router)
 app.include_router(block_router)
