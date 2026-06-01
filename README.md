@@ -114,10 +114,34 @@ Open `http://127.0.0.1:52781/docs` for the auto-generated Swagger UI to test all
 Available endpoints:
 
 ```
-GET /atom/{id}                    Single atom by blake3 hash
-GET /list/{id}                    Atom chain following next_id pointers
+GET /atom/{id}                    Single expression by blake3 hash
+GET /list/{id}                    Expr list chain from root hash
 GET /chain/{chain_id}             Latest block for a chain (or null)
 GET /block/{id}                   Full block by atom hash
 GET /block/{id}/account/{addr}    Account state at a specific block
 GET /transaction/{id}             Transaction by atom hash
+GET /search                       Transaction search via bloom filters
 ```
+
+### Transaction search
+
+Search for transactions across bloom-filtered eras using `GET /search`:
+
+```bash
+# Search by sender
+curl "http://127.0.0.1:52781/search?sender=0x..."
+
+# Search by receiver
+curl "http://127.0.0.1:52781/search?receiver=0x..."
+
+# Search by tx hash
+curl "http://127.0.0.1:52781/search?tx_hash=0x..."
+
+# Search by key
+curl "http://127.0.0.1:52781/search?key=0x..."
+
+# Combine filters (at least one required)
+curl "http://127.0.0.1:52781/search?sender=0x...&receiver=0x...&era_start=0&era_end=5"
+```
+
+Parameters are hex-encoded bytes. Returns a list of matching block hashes (bloom filter — may include false positives). Optional `era_start` (default 0) and `era_end` (default current era) control the search range.
