@@ -10,8 +10,9 @@ from astreum import Node
 from modes.tui.render import render_app
 from modes.tui.pages.accounts.create import AccountCreatePage
 from modes.tui.pages.accounts.list import AccountListPage
+from modes.tui.pages.account_find import FindAccountPage
 from modes.tui.pages.menu import MenuPage
-from modes.tui.pages.search import SearchPage
+from modes.tui.pages.search import SearchTransactionPage
 from modes.tui.pages.settings import SettingsPage
 from modes.tui.pages.terminal import TerminalPage
 from modes.tui.pages.transaction import TransactionPage
@@ -58,7 +59,8 @@ class App:
         self.header_block = HEADER_LINES
         self.pages = {
             "menu": MenuPage(),
-            "search": SearchPage(),
+            "search": SearchTransactionPage(),
+            "account_find": FindAccountPage(),
             "account_list": AccountListPage(),
             "account_create": AccountCreatePage(),
             "transaction_create": TransactionPage(),
