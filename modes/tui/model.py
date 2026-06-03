@@ -15,6 +15,7 @@ from modes.tui.pages.menu import MenuPage
 from modes.tui.pages.search import SearchTransactionPage
 from modes.tui.pages.settings import SettingsPage
 from modes.tui.pages.terminal import TerminalPage
+from modes.tui.pages.block_view import ViewBlockPage
 from modes.tui.pages.transaction import TransactionPage
 
 if os.name == "nt":
@@ -65,6 +66,7 @@ class App:
             "account_create": AccountCreatePage(),
             "transaction_create": TransactionPage(),
             "terminal": TerminalPage(),
+            "block_view": ViewBlockPage(),
             "settings": SettingsPage(),
         }
 

@@ -14,6 +14,7 @@ class MenuPage(BasePage):
                 PageElement(label="Find Account", next="account_find"),
                 PageElement(label="List Accounts", next="account_list"),
                 PageElement(label="Create Account", next="account_create"),
+                PageElement(label="View Block", next="block_view"),
                 PageElement(label="Create Transaction", next="transaction_create"),
                 PageElement(label="Terminal", next="terminal"),
                 PageElement(label="Settings", next="settings"),
