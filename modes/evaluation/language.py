@@ -18,6 +18,10 @@ def _link_to_list(link: Expr) -> List[Expr]:
         if link.head is None and link.tail is None:
             break
         result.append(link.head)
+        if not isinstance(link.tail, Expr.Link):
+            if link.tail is not None:
+                result.append(link.tail)
+            break
         link = link.tail
     return result
 
@@ -33,15 +37,16 @@ def _list_to_link(items: List[Expr]) -> Expr:
 
 
 def _build_param_symbols(count: int) -> Expr:
-    """Build a Link chain of param symbols: ($0 $1 ... $N-1)."""
-    symbols = [Expr.Symbol(f"${i}") for i in range(count)]
+    """Build a Link chain of single-letter param symbols: (n), (n m), etc."""
+    names = ["n", "m", "o", "p", "q", "r"]
+    symbols = [Expr.Symbol(names[i]) for i in range(min(count, len(names)))]
     return _list_to_link(symbols)
 
 
 def _wrap_as_fn_call(args: List[Expr], body: Expr) -> Expr:
     """Wrap args and a body expression into an implicit fn call.
 
-    Produces: (argN ... arg1 (quote ($0 ... $N-1)) (quote body) fn)
+    Produces: (argN ... arg1 (quote (n ...)) (quote body) fn)
     """
     n = len(args)
     param_chain = _build_param_symbols(n)

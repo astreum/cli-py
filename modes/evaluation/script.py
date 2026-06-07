@@ -23,13 +23,18 @@ def _link_to_list(link: Expr) -> List[Expr]:
 
     Link(a, Link(b, Link(c, None))) → [a, b, c]
     Link(None, None) (NIL) → []
-    Link(a, None) → [a]
+    Link(a, b) where b is an atom → [a, b]
     """
     result: List[Expr] = []
     while isinstance(link, Expr.Link):
         if link.head is None and link.tail is None:
             break
         result.append(link.head)
+        if not isinstance(link.tail, Expr.Link):
+            # Last element is a bare atom (not wrapped in a Link)
+            if link.tail is not None:
+                result.append(link.tail)
+            break
         link = link.tail
     return result
 
@@ -52,11 +57,11 @@ def _load_module_from_path(
     active_stack: Set[Tuple[str, str]],
 ) -> None:
     normalized_path = module_path.expanduser()
-    module_expr = _parse_module_expr(normalized_path)
+    definitions = _parse_module_expr(normalized_path)
     resolved_path = normalized_path.resolve()
     _process_module(
         node=node,
-        module_expr=module_expr,
+        definitions=definitions,
         env_data=env_data,
         current_prefix=current_prefix,
         module_dir=resolved_path.parent,
@@ -79,9 +84,10 @@ def _load_module_from_ref(
         )
     if not isinstance(module_expr, Expr.Link):
         raise ValueError("reference import must resolve to a list expression")
+    definitions = _link_to_list(module_expr)
     _process_module(
         node=node,
-        module_expr=module_expr,
+        definitions=definitions,
         env_data=env_data,
         current_prefix=current_prefix,
         module_dir=None,
@@ -92,7 +98,7 @@ def _load_module_from_ref(
 
 def _process_module(
     node: Node,
-    module_expr: Expr,
+    definitions: List[Expr],
     env_data: Dict[str, Expr],
     current_prefix: Optional[str],
     module_dir: Optional[Path],
@@ -106,7 +112,6 @@ def _process_module(
 
     active_stack.add(origin)
 
-    definitions = _link_to_list(module_expr)
     entries = _collect_definition_entries(definitions=definitions)
     local_name_map = _build_definition_name_map(
         entries=entries, current_prefix=current_prefix
@@ -251,7 +256,13 @@ def _strip_wrapping_quotes(value: str) -> str:
     return value
 
 
-def _parse_module_expr(module_path: Path) -> Expr:
+def _parse_module_expr(module_path: Path) -> List[Expr]:
+    """Parse a .aex module file into a list of definition expressions.
+
+    Each top-level s-expression in the file becomes one element in the
+    returned list.  This avoids the Link-chain ambiguity inherent in a
+    single flat chain for multiple definitions.
+    """
     try:
         raw_contents = module_path.read_text(encoding="utf-8")
     except OSError as exc:
@@ -259,12 +270,17 @@ def _parse_module_expr(module_path: Path) -> Expr:
 
     module_str = raw_contents.replace("\r\n", "\n").replace("\r", "\n")
     tokens = tokenize(module_str)
-    module_expr, remainder = parse(tokens=tokens)
-    if remainder:
-        raise ValueError("unexpected trailing tokens while parsing module script")
-    if not isinstance(module_expr, Expr.Link):
-        raise ValueError("module script must resolve to a list expression of definitions")
-    return module_expr
+
+    definitions: List[Expr] = []
+    remaining = tokens
+    while remaining:
+        expr, remaining = parse(tokens=remaining)
+        definitions.append(expr)
+
+    if not definitions:
+        raise ValueError("module script must contain at least one definition")
+
+    return definitions
 
 
 def _expr_to_bytes(expr: Expr) -> Optional[bytes]:
