@@ -5,8 +5,9 @@ from typing import Dict, List, Optional, Sequence, Set, Tuple
 
 from astreum import Env, Expr, Node, parse, tokenize
 
+
 def load_script_to_environment(node: Node, script: str) -> Env:
-    env_data: Dict[bytes, Expr] = {}
+    env_data: Dict[str, Expr] = {}
     _load_module_from_path(
         node=node,
         module_path=Path(script).expanduser(),
@@ -17,10 +18,36 @@ def load_script_to_environment(node: Node, script: str) -> Env:
     return Env(data=env_data)
 
 
+def _link_to_list(link: Expr) -> List[Expr]:
+    """Unroll a right-linked Link chain into a Python list.
+
+    Link(a, Link(b, Link(c, None))) → [a, b, c]
+    Link(None, None) (NIL) → []
+    Link(a, None) → [a]
+    """
+    result: List[Expr] = []
+    while isinstance(link, Expr.Link):
+        if link.head is None and link.tail is None:
+            break
+        result.append(link.head)
+        link = link.tail
+    return result
+
+
+def _list_to_link(items: List[Expr]) -> Expr:
+    """Build a right-linked Link chain from a Python list."""
+    if not items:
+        return Expr.Link(None, None)
+    result: Expr = items[-1]
+    for item in reversed(items[:-1]):
+        result = Expr.Link(item, result)
+    return result
+
+
 def _load_module_from_path(
     node: Node,
     module_path: Path,
-    env_data: Dict[bytes, Expr],
+    env_data: Dict[str, Expr],
     current_prefix: Optional[str],
     active_stack: Set[Tuple[str, str]],
 ) -> None:
@@ -41,7 +68,7 @@ def _load_module_from_path(
 def _load_module_from_ref(
     node: Node,
     atom_id: bytes,
-    env_data: Dict[bytes, Expr],
+    env_data: Dict[str, Expr],
     current_prefix: Optional[str],
     active_stack: Set[Tuple[str, str]],
 ) -> None:
@@ -50,7 +77,7 @@ def _load_module_from_ref(
         raise ValueError(
             f"unable to load module script from reference '{atom_id.hex()}'"
         )
-    if not isinstance(module_expr, Expr.ListExpr):
+    if not isinstance(module_expr, Expr.Link):
         raise ValueError("reference import must resolve to a list expression")
     _process_module(
         node=node,
@@ -65,8 +92,8 @@ def _load_module_from_ref(
 
 def _process_module(
     node: Node,
-    module_expr: Expr.ListExpr,
-    env_data: Dict[bytes, Expr],
+    module_expr: Expr,
+    env_data: Dict[str, Expr],
     current_prefix: Optional[str],
     module_dir: Optional[Path],
     origin: Tuple[str, str],
@@ -79,7 +106,8 @@ def _process_module(
 
     active_stack.add(origin)
 
-    entries = _collect_definition_entries(module_expr=module_expr)
+    definitions = _link_to_list(module_expr)
+    entries = _collect_definition_entries(definitions=definitions)
     local_name_map = _build_definition_name_map(
         entries=entries, current_prefix=current_prefix
     )
@@ -118,7 +146,7 @@ def _register_definition(
     index: int,
     value_expr: Expr,
     name_expr: Expr,
-    env_data: Dict[bytes, Expr],
+    env_data: Dict[str, Expr],
     current_prefix: Optional[str],
     local_name_map: Dict[str, str],
 ) -> None:
@@ -133,12 +161,8 @@ def _register_definition(
         if current_prefix
         else value_expr
     )
-    try:
-        key = qualified_name.encode("utf-8")
-    except UnicodeEncodeError as exc:
-        raise ValueError(f"definition {index} name must be valid utf-8") from exc
 
-    env_data[key] = rewritten_value
+    env_data[qualified_name] = rewritten_value
 
 
 def _handle_import(
@@ -146,7 +170,7 @@ def _handle_import(
     index: int,
     prefix_expr: Expr,
     path_expr: Expr,
-    env_data: Dict[bytes, Expr],
+    env_data: Dict[str, Expr],
     module_dir: Optional[Path],
     current_prefix: Optional[str],
     active_stack: Set[Tuple[str, str]],
@@ -156,7 +180,8 @@ def _handle_import(
 
     import_prefix = _join_prefix(current_prefix, prefix_expr.value)
     if _is_ref_import(path_expr):
-        atom_bytes = _expr_to_bytes(path_expr.elements[0])
+        path_elems = _link_to_list(path_expr)
+        atom_bytes = _expr_to_bytes(path_elems[0])
         if not atom_bytes:
             raise ValueError(
                 f"definition {index} import ref must provide valid atom id"
@@ -205,11 +230,14 @@ def _import_path_from_expr(index: int, path_expr: Expr) -> str:
 
 
 def _is_ref_import(path_expr: Expr) -> bool:
+    """Check if path_expr is a (hash ref) reference import."""
+    if not isinstance(path_expr, Expr.Link):
+        return False
+    path_elems = _link_to_list(path_expr)
     return (
-        isinstance(path_expr, Expr.ListExpr)
-        and len(path_expr.elements) == 2
-        and isinstance(path_expr.elements[1], Expr.Symbol)
-        and path_expr.elements[1].value == "ref"
+        len(path_elems) == 2
+        and isinstance(path_elems[1], Expr.Symbol)
+        and path_elems[1].value == "ref"
     )
 
 
@@ -223,7 +251,7 @@ def _strip_wrapping_quotes(value: str) -> str:
     return value
 
 
-def _parse_module_expr(module_path: Path) -> Expr.ListExpr:
+def _parse_module_expr(module_path: Path) -> Expr:
     try:
         raw_contents = module_path.read_text(encoding="utf-8")
     except OSError as exc:
@@ -234,7 +262,7 @@ def _parse_module_expr(module_path: Path) -> Expr.ListExpr:
     module_expr, remainder = parse(tokens=tokens)
     if remainder:
         raise ValueError("unexpected trailing tokens while parsing module script")
-    if not isinstance(module_expr, Expr.ListExpr):
+    if not isinstance(module_expr, Expr.Link):
         raise ValueError("module script must resolve to a list expression of definitions")
     return module_expr
 
@@ -256,18 +284,24 @@ def _expr_to_bytes(expr: Expr) -> Optional[bytes]:
 
 
 def _collect_definition_entries(
-    module_expr: Expr.ListExpr,
+    definitions: List[Expr],
 ) -> List[Tuple[int, Expr, Expr, Expr.Symbol]]:
+    """Extract (value, name/prefix, terminator) triples from definition Link chains.
+
+    Each definition is a Link chain of 3 elements:
+      value name/prefix terminator
+    e.g. Link(Bytes(1), Link(Symbol("x"), Symbol("def")))
+    """
     entries: List[Tuple[int, Expr, Expr, Expr.Symbol]] = []
-    for index, definition in enumerate(module_expr.elements):
-        if not isinstance(definition, Expr.ListExpr):
-            raise ValueError(f"definition {index} must be a list expression")
-        if len(definition.elements) != 3:
+    for index, definition in enumerate(definitions):
+        def_elems = _link_to_list(definition)
+        if len(def_elems) != 3:
             raise ValueError(
-                f"definition {index} must contain value, name, and def symbol"
+                f"definition {index} must contain value, name, and def symbol, "
+                f"got {len(def_elems)} elements"
             )
 
-        first_expr, second_expr, terminator_expr = definition.elements
+        first_expr, second_expr, terminator_expr = def_elems
         if not isinstance(terminator_expr, Expr.Symbol):
             raise ValueError(
                 f"definition {index} must terminate with def or import symbol"
@@ -300,16 +334,22 @@ def _rewrite_expr_symbols(value_expr: Expr, replacements: Dict[str, str]) -> Exp
             return Expr.Symbol(replacement)
         return value_expr
 
-    if isinstance(value_expr, Expr.ListExpr):
+    if isinstance(value_expr, Expr.Link):
         changed = False
-        new_elements: List[Expr] = []
-        for element in value_expr.elements:
-            rewritten = _rewrite_expr_symbols(element, replacements)
-            if rewritten is not element:
+        new_head = value_expr.head
+        new_tail = value_expr.tail
+        if new_head is not None:
+            rewritten_head = _rewrite_expr_symbols(new_head, replacements)
+            if rewritten_head is not new_head:
                 changed = True
-            new_elements.append(rewritten)
+                new_head = rewritten_head
+        if new_tail is not None:
+            rewritten_tail = _rewrite_expr_symbols(new_tail, replacements)
+            if rewritten_tail is not new_tail:
+                changed = True
+                new_tail = rewritten_tail
         if changed:
-            return Expr.ListExpr(new_elements)
+            return Expr.Link(new_head, new_tail)
         return value_expr
 
     return value_expr
