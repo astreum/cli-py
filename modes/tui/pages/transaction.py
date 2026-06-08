@@ -1,4 +1,4 @@
-from .base import BasePage
+from ..base import BasePage
 
 
 class TransactionPage(BasePage):

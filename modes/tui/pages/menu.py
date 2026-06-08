@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from .base import BasePage, PageElement
+from ..base import BasePage
+from ..element import PageElement
 
 
 class MenuPage(BasePage):

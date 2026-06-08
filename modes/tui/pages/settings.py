@@ -4,8 +4,8 @@ import json
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
-from .base import BasePage
-from .element import PageElement
+from ..base import BasePage
+from ..element import PageElement
 
 
 class SettingsPage(BasePage):
