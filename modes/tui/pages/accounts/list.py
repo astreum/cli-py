@@ -2,8 +2,8 @@ from pathlib import Path
 from typing import Optional
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
-from ..base import BasePage
-from ..element import PageElement
+from ...base import BasePage
+from ...element import PageElement
 
 
 def load_accounts(data_dir: Optional[Path]) -> list[tuple[str, str]]:
