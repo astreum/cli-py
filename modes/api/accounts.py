@@ -48,5 +48,4 @@ def get_block_account(block_id: str, address: str, node=Depends(require_node)):
         "counter": account.counter,
         "data_hash": account.data_hash.hex(),
         "channels_hash": account.channels_hash.hex(),
-        "atom_hash": hex_encode(account.atom_hash),
     }
