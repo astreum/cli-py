@@ -5,13 +5,21 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 
 from astreum.validation.models.block import Block
+from astreum.consensus.block.rate import calculate_astreum_rate
 
 from .deps import require_node, hex_encode
 
 router = APIRouter()
 
 
-def _serialize_block(block) -> dict:
+def _serialize_block(block, node=None) -> dict:
+    astreum_rate = None
+    if node is not None:
+        try:
+            astreum_rate = calculate_astreum_rate(block, node)
+        except (ValueError, ZeroDivisionError):
+            pass
+
     return {
         "id": hex_encode(block.expr_id),
         "version": block.version,
@@ -34,6 +42,7 @@ def _serialize_block(block) -> dict:
         "cumulative_mint": block.cumulative_mint,
         "body_hash": hex_encode(block.body_hash),
         "signature": hex_encode(block.signature),
+        "astreum_rate": astreum_rate,
     }
 
 
@@ -50,7 +59,7 @@ def get_block(block_id: str, node=Depends(require_node)):
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
 
-    return _serialize_block(block)
+    return _serialize_block(block, node)
 
 
 @router.get("/block")
@@ -64,4 +73,4 @@ def get_block_by_height(height: int, node=Depends(require_node)):
             status_code=404, detail=f"Block at height {height} not found"
         )
 
-    return _serialize_block(block)
+    return _serialize_block(block, node)

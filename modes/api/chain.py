@@ -4,9 +4,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from astreum.consensus.block.rate import calculate_astreum_rate
-
-from .deps import require_node, hex_encode
+from .deps import require_node
+from .block import _serialize_block
 
 router = APIRouter()
 
@@ -24,26 +23,4 @@ def get_chain(chain_id: int, node=Depends(require_node)):
     if node.latest_block is None:
         return None
 
-    lb = node.latest_block
-    try:
-        astreum_rate = calculate_astreum_rate(lb, node)
-    except (ValueError, ZeroDivisionError):
-        astreum_rate = None
-    return {
-        "id": hex_encode(getattr(lb, "expr_id", None)),
-        "version": getattr(lb, "version", 1),
-        "chain_id": getattr(lb, "chain_id", chain_id),
-        "height": getattr(lb, "height", None),
-        "previous_block_hash": hex_encode(getattr(lb, "previous_block_hash", None)),
-        "timestamp": getattr(lb, "timestamp", None),
-        "difficulty": getattr(lb, "difficulty", None),
-        "accounts_hash": hex_encode(getattr(lb, "accounts_hash", None)),
-        "transactions_hash": hex_encode(getattr(lb, "transactions_hash", None)),
-        "receipts_hash": hex_encode(getattr(lb, "receipts_hash", None)),
-        "validator_public_key_bytes": hex_encode(getattr(lb, "validator_public_key_bytes", None)),
-        "nonce": getattr(lb, "nonce", None),
-        "total_transaction_fee": getattr(lb, "total_transaction_fee", None),
-        "total_storage_fee": getattr(lb, "total_storage_fee", None),
-        "cumulative_stake": getattr(lb, "cumulative_stake", None),
-        "astreum_rate": astreum_rate,
-    }
+    return _serialize_block(node.latest_block, node)
