@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from astreum.consensus.block.iaar import calculate_iaar
+from astreum.consensus.block.rate import calculate_astreum_rate
 
 from .deps import require_node, hex_encode
 
@@ -26,7 +26,7 @@ def get_chain(chain_id: int, node=Depends(require_node)):
 
     lb = node.latest_block
     try:
-        astreum_rate = calculate_iaar(lb)
+        astreum_rate = calculate_astreum_rate(lb, node)
     except (ValueError, ZeroDivisionError):
         astreum_rate = None
     return {
