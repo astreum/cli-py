@@ -7,7 +7,7 @@ from typing import Optional
 from fastapi import HTTPException
 
 from astreum.node import Node
-from astreum.machine.models.expression import Expr, ZERO32
+from astreum.machine.models.expression import Expr
 
 _node: Optional[Node] = None
 
@@ -26,8 +26,8 @@ def require_node() -> Node:
 
 
 def hex_encode(b: Optional[bytes]) -> Optional[str]:
-    """Return lowercase hex of *b*, or None if *b* is None/ZERO32."""
-    if b is None or b == ZERO32:
+    """Return lowercase hex of *b*, or None if *b* is None."""
+    if b is None:
         return None
     return b.hex()
 
