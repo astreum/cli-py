@@ -275,6 +275,7 @@ def run_tui(*, data_dir: Path, configs: dict[str, Any], node: Node) -> int:
 
     try:
         with KeyboardInput() as keyboard:
+            last_render = time.time()
             while not app.should_exit:
                 updated = False
 
@@ -292,6 +293,11 @@ def run_tui(*, data_dir: Path, configs: dict[str, Any], node: Node) -> int:
                     else:
                         app.handle_char(key)
                     updated = True
+
+                now = time.time()
+                if now - last_render >= 1.0:
+                    updated = True
+                    last_render = now
 
                 if updated:
                     render_app(app)

@@ -1,9 +1,32 @@
 import os
 import sys
+from datetime import datetime, timezone
 from typing import List, Optional, Tuple
 
 CURSOR_STYLE = "\x1b[47m\x1b[30m"
 CURSOR_RESET = "\x1b[0m"
+
+def build_block_summary(node) -> str:
+    block = getattr(node, "latest_block", None)
+    if block is None:
+        attempts = getattr(node, "_block_fetch_attempts", 0)
+        return f"  No blocks yet! ({attempts} queries)"
+    height = block.height
+    expr_hex = block.expr_id.hex()[:16] if block.expr_id else "0000000000000000"
+    ts = block.timestamp
+    if ts:
+        dt = datetime.fromtimestamp(ts, tz=timezone.utc)
+        time_str = dt.strftime("%Y-%m-%d %H:%M UTC")
+    else:
+        time_str = "---"
+    return f"  Block #{height}  \u2502  0x{expr_hex}  \u2502  {time_str}"
+
+def build_node_status(node) -> str:
+    chain = node.config.get("chain", "unknown")
+    connected = "connected" if getattr(node, "is_connected", False) else "disconnected"
+    peer_count = len(getattr(node, "peers", {}))
+    peer_word = "peer" if peer_count == 1 else "peers"
+    return f"  {chain}  \u2502  {connected}  \u2502  {peer_count} {peer_word}"
 
 
 def apply_cursor_overlay(line: str, col: int, width: int) -> str:
@@ -53,6 +76,9 @@ def render_app(app) -> None:
     lines: List[str] = ["","",""]
 
     lines.extend(app.header_block)
+    lines.append("")
+    lines.append(build_block_summary(app.node))
+    lines.append(build_node_status(app.node))
     lines.append("")
 
     if app.flash_message:

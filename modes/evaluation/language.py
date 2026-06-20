@@ -5,10 +5,9 @@ from typing import Any, List, Optional
 
 from utils.config import persist_node_latest_block_hash
 from utils.latest_block import start_latest_block_hash_poller
-from astreum import Node, Expr, parse, tokenize
+from astreum import Node, Expr, compile, parse, tokenize
 from astreum.machine.main import Machine
 from astreum.machine.models.environment import Env
-from modes.evaluation.script import load_script_to_environment
 
 
 def _link_to_list(link: Expr) -> List[Expr]:
@@ -76,9 +75,6 @@ def eval_lang(
     evaluated_expr: Optional[Expr] = None
     env: Env = Env()
 
-    if script is not None:
-        env = load_script_to_environment(script=script, node=node)
-
     try:
         if entry_expr_str is not None:
             machine = Machine(node=node, meter_enabled=False)
@@ -97,19 +93,28 @@ def eval_lang(
             ):
                 func_name = elems[-1].value
                 args = elems[:-1]
+
+                if script is None:
+                    sys.stdout.write(f"error: implicit fn-call requires --script\n")
+                    sys.stdout.flush()
+                    return 1
+
+                env = compile(node=node, script=script, target=func_name)
                 body = env.get(func_name)
                 if body is None:
-                    sys.stdout.write(f"error: '{func_name}' not defined in environment\n")
+                    sys.stdout.write(f"error: '{func_name}' not defined in '{script}'\n")
                     sys.stdout.flush()
                     return 1
                 call_expr = _wrap_as_fn_call(args, body)
                 evaluated_expr = machine.run(expr=call_expr, env=env)
             else:
+                if script is not None:
+                    env = compile(node=node, script=script, target=entry_expr_str)
                 evaluated_expr = machine.run(expr=entry_expr, env=env)
 
         elif script is not None:
-            # No --expr given, evaluate the symbol 'main' as entry point
             machine = Machine(node=node, meter_enabled=False)
+            env = compile(node=node, script=script, target="main")
             evaluated_expr = machine.run(expr=Expr.Symbol("main"), env=env)
 
     finally:
