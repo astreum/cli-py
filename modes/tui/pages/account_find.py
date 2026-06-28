@@ -8,7 +8,7 @@ from astreum.validation.models.accounts import Accounts
 from astreum.machine.models.expression import ZERO32
 
 
-class FindAccountPage(BasePage):
+class AccountSearchPage(BasePage):
     def __init__(self):
         super().__init__(title="Find Account")
         self._results_body = "Search for results!"
@@ -32,12 +32,12 @@ class FindAccountPage(BasePage):
         block_val = self._input("Block")
 
         self.elements = [
-            PageElement(label="  Filter"),
-            PageElement(label="  Address", input=[address_val]),
-            PageElement(label="  Chain ID", input=[chain_id_val]),
-            PageElement(label="  Block (#height/0xhash)", input=[block_val]),
+            PageElement(label="Filter"),
+            PageElement(label="Address", input=[address_val]),
+            PageElement(label="Chain ID", input=[chain_id_val]),
+            PageElement(label="Block (#height/0xhash)", input=[block_val]),
             PageElement(label="[Find]", action=self._do_find),
-            PageElement(label="  Results"),
+            PageElement(label="Results"),
             PageElement(label="", body=self._results_body),
         ]
 

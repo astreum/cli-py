@@ -10,13 +10,14 @@ from astreum import Node
 from modes.tui.render import render_app
 from modes.tui.pages.accounts.create import AccountCreatePage
 from modes.tui.pages.accounts.list import AccountListPage
-from modes.tui.pages.account_find import FindAccountPage
+from modes.tui.pages.account_find import AccountSearchPage
 from modes.tui.pages.menu import MenuPage
-from modes.tui.pages.search import SearchTransactionPage
+from modes.tui.pages.search import SearchPage
 from modes.tui.pages.settings import SettingsPage
 from modes.tui.pages.terminal import TerminalPage
-from modes.tui.pages.block_view import ViewBlockPage
+from modes.tui.pages.block_view import BlockSearchPage
 from modes.tui.pages.transaction import TransactionPage
+from modes.tui.pages.transaction_search import TransactionSearchPage
 
 if os.name == "nt":
     import msvcrt
@@ -60,13 +61,14 @@ class App:
         self.header_block = HEADER_LINES
         self.pages = {
             "menu": MenuPage(),
-            "search": SearchTransactionPage(),
-            "account_find": FindAccountPage(),
+            "search": SearchPage(),
+            "account_search": AccountSearchPage(),
             "account_list": AccountListPage(),
             "account_create": AccountCreatePage(),
+            "block_search": BlockSearchPage(),
+            "transaction_search": TransactionSearchPage(),
             "transaction_create": TransactionPage(),
             "terminal": TerminalPage(),
-            "block_view": ViewBlockPage(),
             "settings": SettingsPage(),
         }
 
@@ -174,16 +176,15 @@ class App:
     def handle_return(self):
         if self.flash_message:
             self.flash_message = None
+            return
             
         if self.input_focus:
             self.input_focus = False
+            return
         
-        # elif self.previous_view:
-        #     current_view = self.active_view
-        #     next_view = self.previous_view
-        #     self.previous_view = current_view
-        #     self.active_view = next_view
-
+        if self.previous_view is not None:
+            self.active_view = self.previous_view
+            self.previous_view = None
         else:
             self.active_view = "menu"
     

@@ -11,11 +11,9 @@ class MenuPage(BasePage):
     def load_elements(self, *args, **kwargs):
         if self.elements == []:
             self.elements = [
-                PageElement(label="Search Transaction", next="search"),
-                PageElement(label="Find Account", next="account_find"),
+                PageElement(label="Search", next="search"),
                 PageElement(label="List Accounts", next="account_list"),
                 PageElement(label="Create Account", next="account_create"),
-                PageElement(label="View Block", next="block_view"),
                 PageElement(label="Create Transaction", next="transaction_create"),
                 PageElement(label="Terminal", next="terminal"),
                 PageElement(label="Settings", next="settings"),

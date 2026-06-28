@@ -8,7 +8,7 @@ from astreum.crypto.bloom_search.block_search import find_block_by_height
 from astreum.machine.models.expression import ZERO32
 
 
-class ViewBlockPage(BasePage):
+class BlockSearchPage(BasePage):
     def __init__(self):
         super().__init__(title="View Block")
         self._results_body = "Look up a block to see its details."
@@ -31,12 +31,12 @@ class ViewBlockPage(BasePage):
         height_val = self._input("Height")
 
         self.elements = [
-            PageElement(label="  Filter"),
-            PageElement(label="  Hash (0x...)", input=[hash_val]),
-            PageElement(label="  Height (#...)", input=[height_val]),
+            PageElement(label="Filter"),
+            PageElement(label="Hash (0x...)", input=[hash_val]),
+            PageElement(label="Height (#...)", input=[height_val]),
             PageElement(label="[Latest]", action=self._do_latest),
             PageElement(label="[Fetch]", action=self._do_fetch),
-            PageElement(label="  Result"),
+            PageElement(label="Result"),
             PageElement(label="", body=self._results_body),
         ]
 
