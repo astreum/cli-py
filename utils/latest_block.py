@@ -46,7 +46,7 @@ def start_latest_block_hash_poller(
                     try:
                         if logger:
                             logger.debug("Calling Block.from_storage for %s", current.hex()[:16])
-                        from astreum.validation.models.block import Block
+                        from astreum.consensus.models.block import Block
                         node.latest_block = Block.from_storage(node, current)
                         if logger:
                             logger.debug("Block.from_storage succeeded for %s", current.hex()[:16])

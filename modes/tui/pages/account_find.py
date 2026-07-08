@@ -3,8 +3,8 @@ from __future__ import annotations
 from ..base import BasePage
 from ..element import PageElement
 
-from astreum.validation.models.block import Block
-from astreum.validation.models.accounts import Accounts
+from astreum.consensus.models.block import Block
+from astreum.consensus.models.accounts import Accounts
 from astreum.machine.models.expression import ZERO32
 
 

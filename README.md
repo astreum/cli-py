@@ -31,9 +31,9 @@ A Command-line interface for interacting with the Astreum blockchain written in 
      ```bash
      source venv/bin/activate
      ```
-   - Windows (PowerShell):
-     ```powershell
-     .\venv\Scripts\Activate.ps1
+   - Windows (Command Prompt):
+     ```cmd
+     .\venv\Scripts\activate.bat
      ```
 3. Install dependencies:
    ```bash
@@ -42,11 +42,12 @@ A Command-line interface for interacting with the Astreum blockchain written in 
 
 ## Usage
 
-`cli-py` has three mutually exclusive modes (pick one):
+`cli-py` has four mutually exclusive modes (pick one):
 
 - **TUI mode** (`--tui`): interactive terminal UI.
 - **Evaluation mode** (`--eval`): evaluate Astreum language scripts / postfix expressions.
-- **Headless mode** (`--headless`): run startup actions without launching the TUI (handy for automation). Optionally start an HTTP API server with `--api-port`.
+- **Headless mode** (`--headless`): run startup actions without launching the TUI. Optionally start an HTTP API server with `--api-port`.
+- **Console mode** (`--console`): interactive REPL for evaluating Astreum expressions.
 
 Settings persist to `settings.json` in the app data directory when saved from the TUI:
 
@@ -94,6 +95,16 @@ Disable the default seed:
 ```bash
 python main.py --headless --node-default-seed none
 ```
+
+### Console mode
+
+Launch an interactive REPL:
+
+```bash
+python main.py --console
+```
+
+Enter expressions in postfix/s-expression syntax. Ctrl+C to exit.
 
 ### Headless + API server
 

@@ -3,11 +3,10 @@ import sys
 from typing import Any, List, Optional
 
 from astreum import Node
-from modes.headless import run_headless
-from modes.evaluation.language import eval_lang
-from modes.tui import run_tui
 from utils.config import load_config, load_node_latest_block_hash
 from utils.data import ensure_data_dir
+
+from modes.console import run_console
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Astreum CLI")
@@ -29,6 +28,12 @@ def build_parser() -> argparse.ArgumentParser:
         dest="eval_mode",
         action="store_true",
         help="Enable evaluation mode instead of launching the GUI",
+    )
+    parser.add_argument(
+        "--console",
+        dest="console_mode",
+        action="store_true",
+        help="Launch interactive console REPL",
     )
     parser.add_argument(
         "--api-port",
@@ -161,10 +166,10 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     selected_modes = sum(
         bool(flag)
-        for flag in (args.tui_mode, args.headless_mode, args.eval_mode)
+        for flag in (args.tui_mode, args.headless_mode, args.eval_mode, args.console_mode)
     )
     if selected_modes > 1:
-        parser.error("Select only one mode: --tui, --headless, or --eval.")
+        parser.error("Select only one mode: --tui, --headless, --eval, or --console.")
 
     data_dir = ensure_data_dir()
     configs = load_config(data_dir)
@@ -183,6 +188,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     node = Node(config=configs["node"])
     
     if args.headless_mode:
+        from modes.headless import run_headless
+        
         cli_args = argv if argv is not None else sys.argv[1:]
         sys.stdout.write(f"cli args: {cli_args}\n")
         sys.stdout.write(f"node config: {configs.get('node', {})}\n")
@@ -195,12 +202,23 @@ def main(argv: Optional[List[str]] = None) -> int:
             api_port=args.api_port,
         )
     elif args.tui_mode:
+        from modes.tui import run_tui
+        
         return run_tui(data_dir=data_dir, configs=configs, node=node)
     
     elif args.eval_mode:
+        from modes.evaluation.language import eval_lang
+        
         return eval_lang(
             script=args.script,
             entry_expr_str=args.expr,
+            data_dir=data_dir,
+            configs=configs,
+            node=node,
+        )
+
+    elif args.console_mode:
+        return run_console(
             data_dir=data_dir,
             configs=configs,
             node=node,

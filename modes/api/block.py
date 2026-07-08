@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from astreum.validation.models.block import Block
+from astreum.consensus.models.block import Block
 from astreum.consensus.block.rate import calculate_astreum_rate
 
 from .deps import require_node, hex_encode

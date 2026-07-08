@@ -7,7 +7,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 
 from astreum import find_transactions
-from astreum.validation.models.block import Block
+from astreum.consensus.models.block import Block
 
 from .deps import require_node, hex_encode
 

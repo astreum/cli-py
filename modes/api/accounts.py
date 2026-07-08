@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from astreum.validation.models.block import Block
-from astreum.validation.models.accounts import Accounts
+from astreum.consensus.models.block import Block
+from astreum.consensus.models.accounts import Accounts
 from astreum.machine.models.expression import ZERO32
 
 from .deps import require_node, hex_encode
