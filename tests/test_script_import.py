@@ -8,7 +8,7 @@ if str(ROOT) not in sys.path:
 
 from astreum import Expr, compile, parse, tokenize
 from astreum.machine.main import Machine
-from astreum.machine.models.environment import Env
+from astreum.machine.environment import Env
 
 
 TEST_SCRIPTS = ROOT / "tests" / "test_scripts"

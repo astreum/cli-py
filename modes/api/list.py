@@ -21,7 +21,7 @@ def get_atom_list(root_id: str, node=Depends(require_node)):
     if header is None:
         raise HTTPException(status_code=404, detail="Expr list not found")
 
-    from astreum.machine.models.expression import resolve_list_exprs
+    from astreum.expression.helpers import resolve_list_exprs
 
     items, _ = resolve_list_exprs(node, header)
     return [serialize_expr(e) for e in items]

@@ -7,7 +7,7 @@ from utils.config import persist_node_latest_block_hash
 from utils.latest_block import start_latest_block_hash_poller
 from astreum import Node, Expr, compile, parse, tokenize
 from astreum.machine.main import Machine
-from astreum.machine.models.environment import Env
+from astreum.machine.environment import Env
 
 
 def _link_to_list(link: Expr) -> List[Expr]:

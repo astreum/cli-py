@@ -5,7 +5,7 @@ from ..element import PageElement
 
 from astreum.consensus.models.block import Block
 from astreum.consensus.models.accounts import Accounts
-from astreum.machine.models.expression import ZERO32
+from astreum.expression import ZERO32
 
 
 class AccountSearchPage(BasePage):

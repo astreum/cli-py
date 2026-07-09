@@ -5,7 +5,7 @@ from ..element import PageElement
 
 from astreum.consensus.models.block import Block
 from astreum.crypto.bloom_search.block_search import find_block_by_height
-from astreum.machine.models.expression import ZERO32
+from astreum.expression import ZERO32
 
 
 class BlockSearchPage(BasePage):

@@ -6,7 +6,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from astreum.machine.models.expression import Expr
+from astreum.expression import Expr
 
 from .deps import require_node, serialize_expr
 

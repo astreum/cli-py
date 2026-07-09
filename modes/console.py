@@ -4,10 +4,10 @@ from pathlib import Path
 from typing import Any
 
 from astreum.machine.main import Machine
-from astreum.machine.models.environment import Env
+from astreum.machine.environment import Env
 from astreum.machine.tokenizer import tokenize
 from astreum.machine.parser import parse
-from astreum.machine.evaluation.main import evaluation
+from astreum.machine.evaluator import evaluation
 
 
 def run_console(*, data_dir: Path, configs: dict[str, Any], node: "Node") -> int:

@@ -7,7 +7,7 @@ from typing import Optional
 from fastapi import HTTPException
 
 from astreum.node import Node
-from astreum.machine.models.expression import Expr
+from astreum.expression import Expr
 
 _node: Optional[Node] = None
 

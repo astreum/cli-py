@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from astreum.consensus.models.block import Block
 from astreum.consensus.models.accounts import Accounts
-from astreum.machine.models.expression import ZERO32
+from astreum.expression import ZERO32
 
 from .deps import require_node, hex_encode
 
