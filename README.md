@@ -128,9 +128,9 @@ Available endpoints:
 GET /expr/{id}                     Single expression by blake3 hash
 GET /list/{id}                    Expr list chain from root hash
 GET /chain/{chain_id}             Latest block for a chain (or null)
-GET /block/{id}                   Full block by expr hash
+GET /block/{id}                   Full block by expression id
 GET /block/{id}/account/{addr}    Account state at a specific block
-GET /transaction/{id}             Transaction by expr hash
+GET /transaction/{id}             Transaction by expression id
 GET /search                       Transaction search via bloom filters
 ```
 
