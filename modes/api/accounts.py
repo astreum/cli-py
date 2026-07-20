@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from astreum.consensus.models.block import Block
+from astreum.consensus.block.encoding.decode import get_block_from_storage
 from astreum.consensus.models.accounts import Accounts
 from astreum.expression import ZERO32
 
@@ -26,7 +26,7 @@ def get_block_account(block_id: str, address: str, node=Depends(require_node)):
         raise HTTPException(status_code=400, detail="Invalid hex account address")
 
     try:
-        block = Block.from_storage(node, block_bytes)
+        block = get_block_from_storage(node, block_bytes)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
 

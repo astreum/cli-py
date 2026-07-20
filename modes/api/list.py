@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from astreum.storage.get.list import get_expr_list
+
 from .deps import require_node, serialize_expr
 
 router = APIRouter()
@@ -17,7 +19,7 @@ def get_atom_list(root_id: str, node=Depends(require_node)):
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid hex list root id")
 
-    header = node.get_expr_list(root_bytes)
+    header = get_expr_list(node, root_bytes)
     if header is None:
         raise HTTPException(status_code=404, detail="Expr list not found")
 

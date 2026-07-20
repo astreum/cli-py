@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Body
 
 from astreum.consensus.transaction.from_storage import get_transaction_from_storage
+from astreum.expression import bytes_
 
 from .deps import require_node, hex_encode
 
@@ -25,14 +26,13 @@ def get_transaction(tx_id: str, node=Depends(require_node)):
         raise HTTPException(status_code=404, detail=str(exc))
 
     return {
-        "id": hex_encode(tx.atom_hash),
-        "version": tx.version,
+        "id": hex_encode(tx.expr_id or tx.hash),
         "chain_id": tx.chain_id,
         "amount": tx.amount,
         "code": tx.code.name if hasattr(tx.code, "name") else int(tx.code),
         "counter": tx.counter,
         "cost_limit": tx.cost_limit,
-        "data": tx.data.hex(),
+        "data": (tx.data.value.hex() if tx.data is not None and tx.data.base == "bytes" and tx.data.value else ""),
         "recipient": tx.recipient.hex(),
         "sender": tx.sender.hex(),
         "signature": hex_encode(tx.signature),
@@ -73,8 +73,7 @@ def submit_transaction(payload: dict = Body(...), node=Depends(require_node)):
             code=code_enum,
             signature=signature_bytes,
             body_hash=body_hash_bytes,
-            version=payload.get("version", 1),
-            data=data_bytes,
+            data=bytes_(data_bytes),
         )
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Transaction validation failed: {exc}")

@@ -3,7 +3,7 @@ from __future__ import annotations
 from ..base import BasePage
 from ..element import PageElement
 
-from astreum.consensus.models.block import Block
+from astreum.consensus.block.encoding.decode import get_block_from_storage
 from astreum.consensus.models.accounts import Accounts
 from astreum.expression import ZERO32
 
@@ -102,7 +102,7 @@ class AccountSearchPage(BasePage):
                     app.flash_message = "Invalid hex in block hash."
                     return
                 try:
-                    block = Block.from_storage(app.node, block_hash_bytes)
+                    block = get_block_from_storage(app.node, block_hash_bytes)
                 except ValueError:
                     app.flash_message = "Block not found for that hash."
                     return
@@ -137,7 +137,7 @@ class AccountSearchPage(BasePage):
 
         # Format result
         lines = [
-            f"  Account at block #{block.height} (0x{(block.atom_hash or b'').hex()[:16]}...)",
+            f"  Account at block #{block.height} (0x{(block.expr_id or b'').hex()[:16]}...)",
             f"  Chain ID: {block.chain_id}",
             "",
             f"  Balance:   {account.balance}",

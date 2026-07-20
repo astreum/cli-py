@@ -7,6 +7,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 
 from astreum.expression import Expr
+from astreum.storage.get.single import get_expr
 
 from .deps import require_node, serialize_expr
 
@@ -21,7 +22,7 @@ def get_atom(atom_id: str, node=Depends(require_node)):
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid hex atom id")
 
-    expr: Optional[Expr] = node.get_expr(atom_id_bytes)
+    expr: Optional[Expr] = get_expr(node, atom_id_bytes)
     if expr is None:
         raise HTTPException(status_code=404, detail="Expression not found")
     return serialize_expr(expr)

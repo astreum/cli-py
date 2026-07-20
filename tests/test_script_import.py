@@ -6,7 +6,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from astreum import Expr, compile, parse, tokenize
+from astreum import Expr, parse, tokenize
+from astreum.machine import assemble_env
 from astreum.machine.main import Machine
 from astreum.machine.environment import Env
 
@@ -16,7 +17,7 @@ TEST_SCRIPTS = ROOT / "tests" / "test_scripts"
 
 class TestScriptCompile(unittest.TestCase):
     def test_imported_target(self):
-        env = compile(
+        env = assemble_env(
             node=None,
             script=str(TEST_SCRIPTS / "main.aex"),
             target="math.calc_sum",
@@ -27,7 +28,7 @@ class TestScriptCompile(unittest.TestCase):
         )
 
     def test_plain_target(self):
-        env = compile(
+        env = assemble_env(
             node=None,
             script=str(TEST_SCRIPTS / "math" / "sum.aex"),
             target="calc_sum",
@@ -38,7 +39,7 @@ class TestScriptCompile(unittest.TestCase):
         )
 
     def test_shared_module_dedup(self):
-        env = compile(
+        env = assemble_env(
             node=None,
             script=str(TEST_SCRIPTS / "multi_import.aex"),
             target="a.add_one",

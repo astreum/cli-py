@@ -34,11 +34,11 @@ def hex_encode(b: Optional[bytes]) -> Optional[str]:
 
 def serialize_expr(expr: Expr) -> dict:
     """Serialize an Expr to a JSON-compatible dict."""
-    if isinstance(expr, Expr.Symbol):
+    if expr.base == "symbol":
         return {"type": "symbol", "value": expr.value}
-    if isinstance(expr, Expr.Bytes):
+    if expr.base == "bytes":
         return {"type": "bytes", "value": expr.value.hex(), "size": expr.size()}
-    if isinstance(expr, Expr.Link):
+    if expr.base == "link":
         return {
             "type": "link",
             "head_hash": (expr.head_hash or expr.head.hash()).hex(),

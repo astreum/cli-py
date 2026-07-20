@@ -7,7 +7,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 
 from astreum import find_transactions
-from astreum.consensus.models.block import Block
+from astreum.consensus.block.encoding.decode import get_block_from_storage
 
 from .deps import require_node, hex_encode
 
@@ -17,15 +17,14 @@ router = APIRouter()
 def _serialize_tx(tx) -> dict:
     """Serialize a Transaction to a JSON-compatible dict."""
     return {
-        "id": hex_encode(tx.atom_hash),
+        "id": hex_encode(tx.expr_id or tx.hash),
         "block_hash": hex_encode(tx.block_hash),
-        "version": tx.version,
         "chain_id": tx.chain_id,
         "amount": tx.amount,
         "code": tx.code.name if hasattr(tx.code, "name") else int(tx.code),
         "counter": tx.counter,
         "cost_limit": tx.cost_limit,
-        "data": tx.data.hex(),
+        "data": (tx.data.value.hex() if tx.data is not None and tx.data.base == "bytes" and tx.data.value else ""),
         "recipient": tx.recipient.hex(),
         "sender": tx.sender.hex(),
         "signature": hex_encode(tx.signature),
@@ -92,7 +91,7 @@ def search_transactions(
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid hex in start_block_hash parameter")
         try:
-            b = Block.from_storage(node, block_hash_bytes)
+            b = get_block_from_storage(node, block_hash_bytes)
             resolved_start_height = b.height
         except ValueError as exc:
             raise HTTPException(status_code=404, detail=f"Start block not found: {exc}")
@@ -105,7 +104,7 @@ def search_transactions(
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid hex in end_block_hash parameter")
         try:
-            b = Block.from_storage(node, end_hash_bytes)
+            b = get_block_from_storage(node, end_hash_bytes)
             resolved_end_height = b.height
         except ValueError as exc:
             raise HTTPException(status_code=404, detail=f"End block not found: {exc}")

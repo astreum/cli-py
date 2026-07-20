@@ -76,7 +76,7 @@ class TransactionSearchPage(BasePage):
             return b.hex()[:n] + "..."
 
         lines = [
-            f"  TX: 0x{short(tx.atom_hash)}",
+            f"  TX: 0x{short(tx.expr_id or tx.hash)}",
             f"  Sender:    0x{short(tx.sender)}",
             f"  Recipient: 0x{short(tx.recipient)}",
             f"  Amount:    {tx.amount}",
@@ -84,8 +84,7 @@ class TransactionSearchPage(BasePage):
             f"  Counter:   {tx.counter}",
             f"  Cost:      {tx.cost_limit}",
             f"  Code:      {tx.code.name if hasattr(tx.code, 'name') else tx.code}",
-            f"  Version:   {tx.version}",
-            f"  Data:      0x{tx.data.hex()[:32] if tx.data else '<none>'}",
+            f"  Data:      0x{short(tx.data.value, 32) if tx.data is not None and tx.data.base == 'bytes' and tx.data.value else '<none>'}",
             f"  Body Hash: 0x{short(tx.body_hash)}",
             f"  Signature: 0x{short(tx.signature)}",
         ]
@@ -159,7 +158,7 @@ class TransactionSearchPage(BasePage):
         else:
             lines: list[str] = []
             for tx in results:
-                tx_hash_short = (tx.atom_hash or tx.hash or b"").hex()[:16]
+                tx_hash_short = (tx.expr_id or tx.hash or b"").hex()[:16]
                 block_short = (tx.block_hash or b"").hex()[:16]
                 sender_short = tx.sender.hex()[:16]
                 recv_short = tx.recipient.hex()[:16]

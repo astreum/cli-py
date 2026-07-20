@@ -3,7 +3,7 @@ from __future__ import annotations
 from ..base import BasePage
 from ..element import PageElement
 
-from astreum.consensus.models.block import Block
+from astreum.consensus.block.encoding.decode import get_block_from_storage
 from astreum.crypto.bloom_search.block_search import find_block_by_height
 from astreum.expression import ZERO32
 
@@ -61,11 +61,9 @@ class BlockSearchPage(BasePage):
             f"  Difficulty: {block.difficulty}",
             f"  Nonce:      {block.nonce}",
             "",
+            f"  Cumulative Total Fee:            {block.cumulative_total_fee}",
             f"  Cumulative Stake:                {block.cumulative_stake}",
-            f"  Cumulative Burn:                 {block.cumulative_burn}",
-            f"  Cumulative Mint:                 {block.cumulative_mint}",
-            f"  Cumulative Transaction Fee:      {block.cumulative_transaction_fee}",
-            f"  Cumulative Storage Fee:          {block.cumulative_storage_fee}",
+            f"  Total Mint:                      {block.total_mint}",
             f"  Total Transaction Fee:           {block.total_transaction_fee}",
             f"  Total Storage Fee:               {block.total_storage_fee}",
             "",
@@ -103,7 +101,7 @@ class BlockSearchPage(BasePage):
                 # Look up by hash
                 raw = hash_str.removeprefix("0x")
                 block_hash = bytes.fromhex(raw)
-                block = Block.from_storage(app.node, block_hash)
+                block = get_block_from_storage(app.node, block_hash)
             else:
                 # Look up by height
                 target = int(height_str.removeprefix("#"))

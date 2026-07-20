@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from astreum.consensus.models.block import Block
-from astreum.consensus.block.rate import calculate_astreum_rate
+from astreum.consensus.block.encoding.decode import get_block_from_storage
+from astreum.consensus.block.rate import calculate_discount_rate
 
 from .deps import require_node, hex_encode
 
@@ -16,13 +16,12 @@ def _serialize_block(block, node=None) -> dict:
     astreum_rate = None
     if node is not None:
         try:
-            astreum_rate = calculate_astreum_rate(block, node)
+            astreum_rate = calculate_discount_rate(block, node=node)
         except (ValueError, ZeroDivisionError):
             pass
 
     return {
         "id": hex_encode(block.expr_id),
-        "version": block.version,
         "chain_id": block.chain_id,
         "height": block.height,
         "previous_block_hash": hex_encode(block.previous_block_hash),
@@ -35,11 +34,9 @@ def _serialize_block(block, node=None) -> dict:
         "nonce": block.nonce,
         "total_transaction_fee": block.total_transaction_fee,
         "total_storage_fee": block.total_storage_fee,
-        "cumulative_transaction_fee": block.cumulative_transaction_fee,
-        "cumulative_storage_fee": block.cumulative_storage_fee,
+        "cumulative_total_fee": block.cumulative_total_fee,
         "cumulative_stake": block.cumulative_stake,
-        "cumulative_burn": block.cumulative_burn,
-        "cumulative_mint": block.cumulative_mint,
+        "total_mint": block.total_mint,
         "body_hash": hex_encode(block.body_hash),
         "signature": hex_encode(block.signature),
         "astreum_rate": astreum_rate,
@@ -55,7 +52,7 @@ def get_block(block_id: str, node=Depends(require_node)):
         raise HTTPException(status_code=400, detail="Invalid hex block id")
 
     try:
-        block = Block.from_storage(node, block_bytes)
+        block = get_block_from_storage(node, block_bytes)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
 

@@ -5,19 +5,21 @@ from typing import Any, List, Optional
 
 from utils.config import persist_node_latest_block_hash
 from utils.latest_block import start_latest_block_hash_poller
-from astreum import Node, Expr, compile, parse, tokenize
+from astreum import Node, Expr, parse, tokenize
+from astreum.machine import assemble_env
 from astreum.machine.main import Machine
 from astreum.machine.environment import Env
+from astreum.expression import link, symbol, NIL
 
 
 def _link_to_list(link: Expr) -> List[Expr]:
     """Unroll a right-linked Link chain into a Python list."""
     result: List[Expr] = []
-    while isinstance(link, Expr.Link):
+    while link.base == "link":
         if link.head is None and link.tail is None:
             break
         result.append(link.head)
-        if not isinstance(link.tail, Expr.Link):
+        if link.tail is None or link.tail.base != "link":
             if link.tail is not None:
                 result.append(link.tail)
             break
@@ -28,17 +30,17 @@ def _link_to_list(link: Expr) -> List[Expr]:
 def _list_to_link(items: List[Expr]) -> Expr:
     """Build a right-linked Link chain from a Python list."""
     if not items:
-        return Expr.Link(None, None)
+        return NIL
     result: Expr = items[-1]
     for item in reversed(items[:-1]):
-        result = Expr.Link(item, result)
+        result = link(item, result)
     return result
 
 
 def _build_param_symbols(count: int) -> Expr:
     """Build a Link chain of single-letter param symbols: (n), (n m), etc."""
     names = ["n", "m", "o", "p", "q", "r"]
-    symbols = [Expr.Symbol(names[i]) for i in range(min(count, len(names)))]
+    symbols = [symbol(names[i]) for i in range(min(count, len(names)))]
     return _list_to_link(symbols)
 
 
@@ -49,11 +51,11 @@ def _wrap_as_fn_call(args: List[Expr], body: Expr) -> Expr:
     """
     n = len(args)
     param_chain = _build_param_symbols(n)
-    quoted_params = Expr.Link(Expr.Symbol("quote"), param_chain)
-    quoted_body = Expr.Link(Expr.Symbol("quote"), body)
+    quoted_params = link(symbol("quote"), param_chain)
+    quoted_body = link(symbol("quote"), body)
 
     # Build the full expression: args... then quoted_params, quoted_body, fn
-    all_parts = list(args) + [quoted_params, quoted_body, Expr.Symbol("fn")]
+    all_parts = list(args) + [quoted_params, quoted_body, symbol("fn")]
     return _list_to_link(all_parts)
 
 
@@ -77,7 +79,7 @@ def eval_lang(
 
     try:
         if entry_expr_str is not None:
-            machine = Machine(node=node, meter_enabled=False)
+            machine = Machine(node=node, meter_limit=None)
             tokens = tokenize(entry_expr_str)
             entry_expr, remainder = parse(tokens)
 
@@ -85,10 +87,10 @@ def eval_lang(
             # If the expression is a Link chain ending with a non-operator
             # symbol (a function name), treat preceding items as args and
             # wrap as (args... (quote params) (quote body) fn).
-            elems = _link_to_list(entry_expr) if isinstance(entry_expr, Expr.Link) else []
+            elems = _link_to_list(entry_expr) if entry_expr.base == "link" else []
             if (
                 len(elems) >= 2
-                and isinstance(elems[-1], Expr.Symbol)
+                and elems[-1].base == "symbol"
                 and elems[-1].value not in _OPERATOR_SYMBOLS
             ):
                 func_name = elems[-1].value
@@ -99,7 +101,7 @@ def eval_lang(
                     sys.stdout.flush()
                     return 1
 
-                env = compile(node=node, script=script, target=func_name)
+                env = assemble_env(node=node, script=script, target=func_name)
                 body = env.get(func_name)
                 if body is None:
                     sys.stdout.write(f"error: '{func_name}' not defined in '{script}'\n")
@@ -109,13 +111,13 @@ def eval_lang(
                 evaluated_expr = machine.run(expr=call_expr, env=env)
             else:
                 if script is not None:
-                    env = compile(node=node, script=script, target=entry_expr_str)
+                    env = assemble_env(node=node, script=script, target=entry_expr_str)
                 evaluated_expr = machine.run(expr=entry_expr, env=env)
 
         elif script is not None:
-            machine = Machine(node=node, meter_enabled=False)
-            env = compile(node=node, script=script, target="main")
-            evaluated_expr = machine.run(expr=Expr.Symbol("main"), env=env)
+            machine = Machine(node=node, meter_limit=None)
+            env = assemble_env(node=node, script=script, target="main")
+            evaluated_expr = machine.run(expr=symbol("main"), env=env)
 
     finally:
         stop_latest_block_hash_poller()
