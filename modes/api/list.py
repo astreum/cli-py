@@ -12,7 +12,7 @@ router = APIRouter()
 
 
 @router.get("/list/{root_id}")
-def get_atom_list(root_id: str, node=Depends(require_node)):
+def get_expr_list_endpoint(root_id: str, node=Depends(require_node)):
     """Return the Expr list chain from the given root hash."""
     try:
         root_bytes = bytes.fromhex(root_id)

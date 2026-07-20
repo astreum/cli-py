@@ -1,4 +1,4 @@
-"""GET /atom/{atom_id} endpoint."""
+"""GET /expr/{expr_id} endpoint."""
 
 from __future__ import annotations
 
@@ -14,15 +14,15 @@ from .deps import require_node, serialize_expr
 router = APIRouter()
 
 
-@router.get("/expr/{atom_id}")
-def get_atom(atom_id: str, node=Depends(require_node)):
-    """Return a single atom by its blake3 id (64-char hex)."""
+@router.get("/expr/{expr_id}")
+def get_expr_endpoint(expr_id: str, node=Depends(require_node)):
+    """Return a single expression by its blake3 hash (64-char hex)."""
     try:
-        atom_id_bytes = bytes.fromhex(atom_id)
+        expr_id_bytes = bytes.fromhex(expr_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid hex atom id")
+        raise HTTPException(status_code=400, detail="Invalid hex expression id")
 
-    expr: Optional[Expr] = get_expr(node, atom_id_bytes)
+    expr: Optional[Expr] = get_expr(node, expr_id_bytes)
     if expr is None:
         raise HTTPException(status_code=404, detail="Expression not found")
     return serialize_expr(expr)

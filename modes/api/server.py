@@ -1,6 +1,6 @@
 """Astreum API — FastAPI server exposing node data over HTTP.
 
-Endpoint modules live alongside this file: atom.py, list.py, chain.py,
+Endpoint modules live alongside this file: expr.py, list.py, chain.py,
 block.py, accounts.py, transaction.py.  This module creates the app and
 registers their routers.
 """

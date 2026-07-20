@@ -14,7 +14,7 @@ router = APIRouter()
 
 @router.get("/transaction/{tx_id}")
 def get_transaction(tx_id: str, node=Depends(require_node)):
-    """Return a transaction by its atom hash."""
+    """Return a transaction by its expr hash."""
     try:
         tx_bytes = bytes.fromhex(tx_id)
     except ValueError:
