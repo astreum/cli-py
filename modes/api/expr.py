@@ -15,7 +15,7 @@ router = APIRouter()
 
 
 @router.get("/expr/{expr_id}")
-def get_expr_endpoint(expr_id: str, node=Depends(require_node)):
+def get_expr_by_hash(expr_id: str, node=Depends(require_node)):
     """Return a single expression by its blake3 hash (64-char hex)."""
     try:
         expr_id_bytes = bytes.fromhex(expr_id)
