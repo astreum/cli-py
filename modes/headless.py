@@ -9,6 +9,7 @@ from typing import Any, Optional
 import uvicorn
 
 from astreum import Node
+from astreum.communication.node import connect_node
 from utils.config import persist_node_latest_block_hash, load_validator_private_key
 from utils.forks import load_node_forks, persist_node_forks
 from utils.latest_block import start_latest_block_hash_poller
@@ -27,7 +28,7 @@ def run_headless(
     If *api_port* is set (via CLI flag or config file), starts an HTTP API
     server on a daemon thread alongside the headless lifecycle.
     """
-    connect_node = configs["cli"]["on_startup_connect_node"]
+    should_connect = configs["cli"]["on_startup_connect_node"]
     validate_blockchain = configs["cli"]["on_startup_validate_blockchain"]
     verify_blockchain = configs["cli"]["on_startup_verify_blockchain"]
 
@@ -39,11 +40,11 @@ def run_headless(
     wait_for_disconnect = False
     stop_latest_block_hash_poller_fn = None
     try:
-        if connect_node:
+        if should_connect:
             sys.stdout.write("connecting node...\n")
             sys.stdout.flush()
             try:
-                node.connect()
+                connect_node(node)
                 sys.stdout.write("node connected\n")
                 sys.stdout.flush()
                 wait_for_disconnect = True

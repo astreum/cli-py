@@ -7,6 +7,7 @@ from typing import Any, List, Optional, Tuple
 from utils.config import persist_node_latest_block_hash, load_validator_private_key
 from utils.latest_block import start_latest_block_hash_poller
 from astreum import Node
+from astreum.communication.node import connect_node
 from modes.tui.render import render_app
 from modes.tui.pages.accounts.create import AccountCreatePage
 from modes.tui.pages.accounts.list import AccountListPage
@@ -91,7 +92,7 @@ class App:
 
         if cli_config.get("on_startup_connect_node"):
             try:
-                self.node.connect()
+                connect_node(self.node)
             except Exception:
                 pass
 
