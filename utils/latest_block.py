@@ -29,7 +29,8 @@ def start_latest_block_hash_poller(
             logger.info("Block hash poller started (interval=%ss)", interval)
         while not stop_event.is_set():
             try:
-                current = getattr(node, "latest_block_hash", None)
+                with node.latest_block_lock:
+                    current = node.latest_block_hash
                 if current is None:
                     node.latest_block = None
                     if logger:
