@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Body
 
+from astreum import Transaction, send_transaction, parse, tokenize
+from astreum.consensus.transaction import TransactionCode
 from astreum.consensus.transaction.from_storage import get_transaction_from_storage
-from astreum.expression import bytes_
+from astreum.expression import NIL
 
 from .deps import require_node, hex_encode
 
@@ -32,7 +34,7 @@ def get_transaction(tx_id: str, node=Depends(require_node)):
         "code": tx.code.name if hasattr(tx.code, "name") else int(tx.code),
         "counter": tx.counter,
         "cost_limit": tx.cost_limit,
-        "data": (tx.data.value.hex() if tx.data is not None and tx.data.base == "bytes" and tx.data.value else ""),
+        "data": repr(tx.data),
         "recipient": tx.recipient.hex(),
         "sender": tx.sender.hex(),
         "signature": hex_encode(tx.signature),
@@ -49,20 +51,24 @@ def submit_transaction(payload: dict = Body(...), node=Depends(require_node)):
         recipient_bytes = bytes.fromhex(payload["recipient"])
         signature_bytes = bytes.fromhex(payload["signature"])
         body_hash_bytes = bytes.fromhex(payload["body_hash"])
-        data_bytes = bytes.fromhex(payload.get("data", "")) if payload.get("data") else b""
     except (ValueError, KeyError, TypeError):
         raise HTTPException(status_code=400, detail="Invalid hex formatting or missing fields in parameters")
 
     # 2. Parse transaction code
     try:
-        from astreum.consensus.transaction import TransactionCode
         code_enum = TransactionCode[payload["code"].upper()]
     except KeyError:
         raise HTTPException(status_code=400, detail=f"Invalid transaction code: {payload.get('code')}")
 
-    # 3. Reconstruct and verify transaction
+    # 3. Parse data expression
     try:
-        from astreum.consensus.transaction import Transaction
+        raw_data = payload.get("data", "")
+        data_expr = parse(tokenize(raw_data))[0] if raw_data else NIL
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid data expression: {exc}")
+
+    # 4. Reconstruct and verify transaction
+    try:
         tx = Transaction(
             chain_id=payload["chain_id"],
             amount=payload["amount"],
@@ -73,14 +79,13 @@ def submit_transaction(payload: dict = Body(...), node=Depends(require_node)):
             code=code_enum,
             signature=signature_bytes,
             body_hash=body_hash_bytes,
-            data=bytes_(data_bytes),
+            data=data_expr,
         )
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Transaction validation failed: {exc}")
 
-    # 4. Broadcast via core library send_transaction
+    # 5. Broadcast via core library send_transaction
     try:
-        from astreum.consensus.transaction import send_transaction
         tx_hash = send_transaction(node, tx)
         return {
             "success": True,
