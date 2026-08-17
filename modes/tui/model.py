@@ -6,7 +6,7 @@ from typing import Any, List, Optional, Tuple
 
 from utils.config import persist_node_latest_block_hash, load_validator_private_key
 from utils.latest_block import start_latest_block_hash_poller
-from astreum import Node
+from astreum import Node, validate_blockchain, verify_blockchain
 from astreum.communication.node import connect_node
 from modes.tui.render import render_app
 from modes.tui.pages.accounts.create import AccountCreatePage
@@ -102,13 +102,13 @@ class App:
                 if validator_key is None:
                     pass
                 else:
-                    self.node.validate(validator_key)
+                    validate_blockchain(self.node, validator_key)
             except Exception:
                 pass
 
         if cli_config.get("on_startup_verify_blockchain"):
             try:
-                self.node.verify()
+                verify_blockchain(self.node)
             except Exception:
                 pass
 

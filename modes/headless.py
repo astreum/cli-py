@@ -8,7 +8,7 @@ from typing import Any, Optional
 
 import uvicorn
 
-from astreum import Node
+from astreum import Node, validate_blockchain, verify_blockchain
 from astreum.communication.node import connect_node
 from utils.config import persist_node_latest_block_hash, load_validator_private_key
 from utils.forks import load_node_forks, persist_node_forks
@@ -60,7 +60,7 @@ def run_headless(
                 if validator_key is None:
                     sys.stdout.write(f"blockchain validation skipped: {error}\n")
                 else:
-                    node.validate(validator_key)
+                    validate_blockchain(node, validator_key)
                     sys.stdout.write("blockchain validation complete\n")
                 sys.stdout.flush()
             except Exception as exc:  # pragma: no cover - best effort logging
@@ -71,7 +71,7 @@ def run_headless(
             sys.stdout.write("verifying blockchain...\n")
             sys.stdout.flush()
             try:
-                node.verify()
+                verify_blockchain(node)
                 sys.stdout.write("blockchain verification started\n")
                 sys.stdout.flush()
                 wait_for_disconnect = True
