@@ -29,8 +29,8 @@ def run_headless(
     server on a daemon thread alongside the headless lifecycle.
     """
     should_connect = configs["cli"]["on_startup_connect_node"]
-    validate_blockchain = configs["cli"]["on_startup_validate_blockchain"]
-    verify_blockchain = configs["cli"]["on_startup_verify_blockchain"]
+    should_validate = configs["cli"]["on_startup_validate_blockchain"]
+    should_verify = configs["cli"]["on_startup_verify_blockchain"]
 
     # Resolve API host/port from CLI arg → config file default
     api_host = api_host or configs["cli"].get("api_host")
@@ -52,7 +52,7 @@ def run_headless(
                 sys.stdout.write(f"node connect failed: {exc}\n")
                 sys.stdout.flush()
 
-        if validate_blockchain:
+        if should_validate:
             sys.stdout.write("validating blockchain...\n")
             sys.stdout.flush()
             try:
@@ -67,7 +67,7 @@ def run_headless(
                 sys.stdout.write(f"blockchain validation failed: {exc}\n")
                 sys.stdout.flush()
 
-        if verify_blockchain:
+        if should_verify:
             sys.stdout.write("verifying blockchain...\n")
             sys.stdout.flush()
             try:
