@@ -124,4 +124,5 @@ def _enqueue_locally(node, tx) -> None:
         put_expr_in_hot_storage(node, tx_expr)
         put_expr_in_cold_storage(node, tx_expr)
 
+    tx.hash = tx.expr().hash()
     node._validation_transaction_queue.put(tx)
