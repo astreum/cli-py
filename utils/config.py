@@ -39,7 +39,7 @@ def load_config(data_dir: Path) -> dict[str, Any]:
 
     default_node_configs = {
         # "validation_secret_key": None,
-        "cold_storage_path": str(data_dir / "exprs"),
+        "cold_storage_path": str(data_dir / "storage"),
     }
 
     for k, v in default_node_configs.items():

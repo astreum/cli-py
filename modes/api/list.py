@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from astreum.storage.get.list import get_expr_list
+from astreum.storage import get_expr_list
 
 from .deps import require_node, serialize_expr
 

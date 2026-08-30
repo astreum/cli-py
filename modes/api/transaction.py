@@ -113,8 +113,7 @@ def submit_transaction(payload: dict = Body(...), node=Depends(require_node)):
 def _enqueue_locally(node, tx) -> None:
     """Persist a transaction's exprs and submit it to the local validation queue."""
     from astreum.expression import resolve_inner_exprs
-    from astreum.storage.put.hot import put_expr_in_hot_storage
-    from astreum.storage.put.cold import put_expr_in_cold_storage
+    from astreum.storage import put_expr_in_cold_storage, put_expr_in_hot_storage
 
     tx_exprs, missed = resolve_inner_exprs(node, tx.expr())
     if missed:
