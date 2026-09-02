@@ -11,14 +11,30 @@ from .deps import require_node, hex_encode
 
 router = APIRouter()
 
+MAX_CURVE_DURATION = 1 << 40
+
+
+def _rate_curve(block, node=None) -> list[dict]:
+    """Discount rate across windowed durations — the chain's yield curve.
+
+    Duration 0 is the all-time rate; further entries are pow2 block windows
+    (1, 2, 4, ...) while statistics for the window are available.
+    """
+    curve = []
+    duration = 0
+    while duration <= MAX_CURVE_DURATION:
+        try:
+            rate = calculate_discount_rate(block, node=node, range_blocks=duration)
+        except (ValueError, ZeroDivisionError):
+            break
+        curve.append({"duration": duration, "rate": rate})
+        duration = 1 if duration == 0 else duration * 2
+    return curve
+
 
 def _serialize_block(block, node=None) -> dict:
-    astreum_rate = None
-    if node is not None:
-        try:
-            astreum_rate = calculate_discount_rate(block, node=node)
-        except (ValueError, ZeroDivisionError):
-            pass
+    rate_curve = _rate_curve(block, node=node)
+    astreum_rate = rate_curve[0]["rate"] if rate_curve else None
 
     return {
         "id": hex_encode(block.expr_id),
@@ -40,6 +56,7 @@ def _serialize_block(block, node=None) -> dict:
         "body_hash": hex_encode(block.body_hash),
         "signature": hex_encode(block.signature),
         "astreum_rate": astreum_rate,
+        "rate_curve": rate_curve,
     }
 
 
