@@ -32,7 +32,8 @@ class AccountCreatePage(BasePage):
         candidate_path = accounts_dir / f"{slug}.txt"
 
         if candidate_path.exists():
-            app.flash_message = f"Account name `{input[0]}` already in use!"
+            app.flash_message = f"Account name `{name}` already in use!"
+            return
 
         private_key = ed25519.Ed25519PrivateKey.generate()
         private_bytes = private_key.private_bytes(
