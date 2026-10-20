@@ -4,6 +4,8 @@ import json
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
+from utils.config import load_validator_private_key
+
 from ..base import BasePage
 from ..element import PageElement
 
@@ -26,14 +28,8 @@ class SettingsPage(BasePage):
             ]
 
     def _default_account_from_config(self, app: "App") -> str:
-        node_config = app.configs["node"]
-        secret_hex = node_config.get("validator_secret_key")
-        if not secret_hex:
-            return ""
-
-        try:
-            private_key = ed25519.Ed25519PrivateKey.from_private_bytes(bytes.fromhex(secret_hex))
-        except ValueError:
+        private_key, _ = load_validator_private_key(app.configs)
+        if private_key is None:
             return ""
 
         public_key_bytes = private_key.public_key().public_bytes(
@@ -83,12 +79,11 @@ class SettingsPage(BasePage):
             app.flash_message = f"Failed to update settings: {exc}"
             return
 
-        app.node.validation_secret_key = private_key
         input_element = self.elements[self.ACCOUNT_INPUT_INDEX]
         input_element.input = [storage_name]
         input_element.input_index = (0, len(storage_name))
 
-        app.flash_message = f"Validator key saved from account '{storage_name}'."
+        app.flash_message = f"Validator key saved from account '{storage_name}'. Restart the CLI to apply."
 
         self.elements = []
 
@@ -111,12 +106,10 @@ class SettingsPage(BasePage):
             app.flash_message = f"Failed to update settings: {exc}"
             return
 
-        node = app.node
-        node.validation_secret_key = None
         input_element = self.elements[self.ACCOUNT_INPUT_INDEX]
         input_element.input = [""]
         input_element.input_index = (0, 0)
 
-        app.flash_message = "Validator key removed."
+        app.flash_message = "Validator key removed. Restart the CLI to apply."
 
         self.elements = []

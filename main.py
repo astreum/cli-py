@@ -3,7 +3,7 @@ import sys
 from typing import Any, List, Optional
 
 from astreum import Node
-from utils.config import load_config, load_node_latest_block_hash
+from utils.config import build_node_config, load_config
 from utils.data import ensure_data_dir
 
 from modes.console import run_console
@@ -181,11 +181,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         if args.api_host is None:
             args.api_host = configs.get("cli", {}).get("api_host", "127.0.0.1")
     
-    latest_hash = load_node_latest_block_hash(data_dir)
-    if latest_hash is not None:
-        configs["node"]["latest_block_hash"] = f"0x{latest_hash.hex()}"
-
-    node = Node(config=configs["node"])
+    node = Node(config=build_node_config(configs, data_dir))
     
     if args.headless_mode:
         from modes.headless import run_headless

@@ -96,6 +96,19 @@ def load_node_latest_block_hash(data_dir: Path) -> Optional[bytes]:
     return data
 
 
+def build_node_config(configs: dict[str, Any], data_dir: Path) -> dict[str, Any]:
+    """Return a copy of the node settings for passing to `Node`.
+
+    The lib changes the dict it receives in place and adds key objects.
+    A copy keeps `configs` free of those values.
+    """
+    node_config = dict(configs["node"])
+    latest_hash = load_node_latest_block_hash(data_dir)
+    if latest_hash is not None:
+        node_config["latest_block_hash"] = f"0x{latest_hash.hex()}"
+    return node_config
+
+
 def persist_node_latest_block_hash(
     data_dir: Path,
     latest_block_hash: bytes,
