@@ -7,6 +7,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 
 from astreum import find_transactions
+from astreum.expression import ZERO32
 from astreum.consensus.block.encoding.decode import get_block_from_storage
 
 from .deps import require_node, hex_encode
@@ -76,10 +77,10 @@ def search_transactions(
         )
 
     try:
-        tx_hash_bytes = bytes.fromhex(tx_hash) if tx_hash else b""
-        sender_bytes = bytes.fromhex(sender) if sender else b""
-        receiver_bytes = bytes.fromhex(receiver) if receiver else b""
-        key_bytes = bytes.fromhex(key) if key else b""
+        tx_hash_bytes = bytes.fromhex(tx_hash) if tx_hash else ZERO32
+        sender_bytes = bytes.fromhex(sender) if sender else ZERO32
+        receiver_bytes = bytes.fromhex(receiver) if receiver else ZERO32
+        key_bytes = bytes.fromhex(key) if key else ZERO32
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid hex in query parameter")
 

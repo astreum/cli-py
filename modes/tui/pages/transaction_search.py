@@ -7,6 +7,7 @@ from ..element import PageElement
 
 from astreum.consensus.transaction.from_storage import get_transaction_from_storage
 from astreum.crypto.bloom_search import bloom_search_tx
+from astreum.expression import ZERO32
 
 
 class TransactionSearchPage(BasePage):
@@ -125,9 +126,9 @@ class TransactionSearchPage(BasePage):
 
         do_hash = self.flag_data
         try:
-            tx_hash_bytes = self._hex_or_hash(id_val, do_hash) if id_val else b""
-            sender_bytes = self._hex_or_hash(sender_val, do_hash) if sender_val else b""
-            recipient_bytes = self._hex_or_hash(recipient_val, do_hash) if recipient_val else b""
+            tx_hash_bytes = self._hex_or_hash(id_val, do_hash) if id_val else ZERO32
+            sender_bytes = self._hex_or_hash(sender_val, do_hash) if sender_val else ZERO32
+            recipient_bytes = self._hex_or_hash(recipient_val, do_hash) if recipient_val else ZERO32
         except ValueError:
             app.flash_message = "Invalid hex in input (try toggling flag_data to hash)"
             return
@@ -144,7 +145,7 @@ class TransactionSearchPage(BasePage):
                 tx_hash=tx_hash_bytes,
                 sender=sender_bytes,
                 receiver=recipient_bytes,
-                key=b"",
+                key=ZERO32,
                 starting_block=starting_block,
                 end_block_height=0,
                 limit=20,
