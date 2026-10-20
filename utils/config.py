@@ -96,6 +96,31 @@ def load_node_latest_block_hash(data_dir: Path) -> Optional[bytes]:
     return data
 
 
+def load_or_create_storage_key(data_dir: Path) -> str:
+    """Return the node storage key as hex, creating the key file if missing.
+
+    The file is `accounts/storage.txt` in `data_dir`, in the format `0x` + hex.
+
+    Raises:
+        ValueError: If the file exists and does not hold a 32-byte hex key.
+    """
+    path = data_dir / "accounts" / "storage.txt"
+    if path.exists():
+        raw = path.read_text().strip().removeprefix("0x")
+        try:
+            if len(bytes.fromhex(raw)) != 32:
+                raise ValueError
+        except ValueError:
+            raise ValueError(f"{path} does not hold a 32-byte hex key") from None
+        return raw
+
+    key = ed25519.Ed25519PrivateKey.generate()
+    raw = key.private_bytes_raw().hex()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("0x" + raw)
+    return raw
+
+
 def build_node_config(configs: dict[str, Any], data_dir: Path) -> dict[str, Any]:
     """Return a copy of the node settings for passing to `Node`.
 
@@ -103,6 +128,8 @@ def build_node_config(configs: dict[str, Any], data_dir: Path) -> dict[str, Any]
     A copy keeps `configs` free of those values.
     """
     node_config = dict(configs["node"])
+    if not node_config.get("storage_secret_key"):
+        node_config["storage_secret_key"] = load_or_create_storage_key(data_dir)
     latest_hash = load_node_latest_block_hash(data_dir)
     if latest_hash is not None:
         node_config["latest_block_hash"] = f"0x{latest_hash.hex()}"

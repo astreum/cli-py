@@ -90,7 +90,6 @@ def _serialize_block(block, node=None) -> dict:
         "total_storage_fee": block.total_storage_fee,
         "cumulative_total_fee": block.cumulative_total_fee,
         "cumulative_stake": block.cumulative_stake,
-        "total_mint": block.total_mint,
         "body_hash": hex_encode(block.body_hash),
         "signature": hex_encode(block.signature),
         "astreum_rate": astreum_rate,

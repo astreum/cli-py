@@ -63,7 +63,6 @@ class BlockSearchPage(BasePage):
             "",
             f"  Cumulative Total Fee:            {block.cumulative_total_fee}",
             f"  Cumulative Stake:                {block.cumulative_stake}",
-            f"  Total Mint:                      {block.total_mint}",
             f"  Total Transaction Fee:           {block.total_transaction_fee}",
             f"  Total Storage Fee:               {block.total_storage_fee}",
             "",
