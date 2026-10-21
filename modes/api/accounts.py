@@ -5,7 +5,6 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 
 from astreum.consensus.block.encoding.decode import get_block_from_storage
-from astreum.consensus.models.accounts import Accounts
 from astreum.expression import ZERO32
 
 from .deps import require_node, hex_encode
@@ -33,7 +32,9 @@ def get_block_account(block_id: str, address: str, node=Depends(require_node)):
     if block.accounts_hash is None or block.accounts_hash == ZERO32:
         raise HTTPException(status_code=404, detail="Block has no accounts")
 
-    accounts = Accounts(root_hash=block.accounts_hash)
+    accounts = block.accounts
+    if accounts is None:
+        raise HTTPException(status_code=404, detail="Block has no accounts")
     try:
         account = accounts.get_account(adr_bytes, node)
     except Exception as exc:

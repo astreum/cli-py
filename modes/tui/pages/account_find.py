@@ -4,7 +4,6 @@ from ..base import BasePage
 from ..element import PageElement
 
 from astreum.consensus.block.encoding.decode import get_block_from_storage
-from astreum.consensus.models.accounts import Accounts
 from astreum.crypto.bloom_search.block_search import find_block_by_height
 from astreum.expression import ZERO32
 
@@ -129,7 +128,12 @@ class AccountSearchPage(BasePage):
             self.elements = []
             return
 
-        accounts = Accounts(root_hash=block.accounts_hash)
+        accounts = block.accounts
+        if accounts is None:
+            self._results_body = "Block has no accounts."
+            self.elements = []
+            return
+
         try:
             account = accounts.get_account(address_bytes, app.node)
         except Exception as exc:
