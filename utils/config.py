@@ -8,6 +8,55 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 
 SETTINGS_FILE_NAME = "settings.json"
 LATEST_BLOCK_HASH_FILE_NAME = "latest_block_hash.bin"
+REDACTED = "<redacted>"
+
+
+def redact_config(node_config: dict[str, Any]) -> dict[str, Any]:
+    """Return a copy of the node settings with secret values masked.
+
+    Args:
+        node_config: Node settings. A key whose name contains "secret" is masked.
+
+    Returns:
+        A new dict. The input dict is not changed.
+    """
+    return {
+        key: REDACTED if "secret" in str(key).lower() and value is not None else value
+        for key, value in node_config.items()
+    }
+
+
+def redact_args(args: list[str]) -> list[str]:
+    """Return a copy of the arguments with secret option values masked.
+
+    Handles `--option value` and `--option=value`. An option is secret when
+    its name contains "secret".
+
+    Args:
+        args: Command-line arguments.
+
+    Returns:
+        A new list. The input list is not changed.
+    """
+    result: list[str] = []
+    mask_next = False
+    for token in args:
+        if mask_next and not token.startswith("--"):
+            result.append(REDACTED)
+            mask_next = False
+            continue
+        mask_next = False
+        if token.startswith("--"):
+            name, sep, _ = token.partition("=")
+            if "secret" in name.lower():
+                if sep:
+                    result.append(f"{name}={REDACTED}")
+                else:
+                    result.append(token)
+                    mask_next = True
+                continue
+        result.append(token)
+    return result
 
 
 def load_config(data_dir: Path) -> dict[str, Any]:

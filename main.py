@@ -3,7 +3,7 @@ import sys
 from typing import Any, List, Optional
 
 from astreum import Node
-from utils.config import build_node_config, load_config
+from utils.config import build_node_config, load_config, redact_args, redact_config
 from utils.data import ensure_data_dir
 
 from modes.console import run_console
@@ -187,8 +187,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         from modes.headless import run_headless
         
         cli_args = argv if argv is not None else sys.argv[1:]
-        sys.stdout.write(f"cli args: {cli_args}\n")
-        sys.stdout.write(f"node config: {configs.get('node', {})}\n")
+        sys.stdout.write(f"cli args: {redact_args(cli_args)}\n")
+        sys.stdout.write(f"node config: {redact_config(configs.get('node', {}))}\n")
         sys.stdout.flush()
         return run_headless(
             data_dir=data_dir,
