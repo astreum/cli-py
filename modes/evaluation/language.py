@@ -8,6 +8,7 @@ from utils.latest_block import start_latest_block_hash_poller
 from astreum import Node, Expr, parse, tokenize
 from astreum.machine import assemble_env
 from astreum.machine.main import Machine
+from astreum.machine.operators.main import OPERATOR_LIST
 from astreum.machine.environment import Env
 from astreum.expression import link, symbol, NIL
 
@@ -37,25 +38,35 @@ def _list_to_link(items: List[Expr]) -> Expr:
     return result
 
 
+MAX_CALL_ARGS = 6
+
+
 def _build_param_symbols(count: int) -> Expr:
-    """Build a Link chain of single-letter param symbols: (n), (n m), etc."""
+    """Build a NIL-ended Link chain of param symbols: (n), (n m), etc."""
     names = ["n", "m", "o", "p", "q", "r"]
-    symbols = [symbol(names[i]) for i in range(min(count, len(names)))]
-    return _list_to_link(symbols)
+    chain: Expr = NIL
+    for name in reversed(names[:count]):
+        chain = link(symbol(name), chain)
+    return chain
+
+
+def _quote(value: Expr) -> Expr:
+    """Build the quoted form the parser builds for 'value."""
+    return link(symbol("'"), link(value, NIL))
 
 
 def _wrap_as_fn_call(args: List[Expr], body: Expr) -> Expr:
-    """Wrap args and a body expression into an implicit fn call.
+    """Wrap args and a body expression into an implicit closure call.
 
-    Produces: (argN ... arg1 (quote (n ...)) (quote body) fn)
+    Produces: (arg1 ... argN '(n ...) 'body closure apply)
     """
-    n = len(args)
-    param_chain = _build_param_symbols(n)
-    quoted_params = link(symbol("quote"), param_chain)
-    quoted_body = link(symbol("quote"), body)
-
-    # Build the full expression: args... then quoted_params, quoted_body, fn
-    all_parts = list(args) + [quoted_params, quoted_body, symbol("fn")]
+    param_chain = _build_param_symbols(len(args))
+    all_parts = list(args) + [
+        _quote(param_chain),
+        _quote(body),
+        symbol("closure"),
+        symbol("apply"),
+    ]
     return _list_to_link(all_parts)
 
 
@@ -83,18 +94,25 @@ def eval_lang(
             tokens = tokenize(entry_expr_str)
             entry_expr, remainder = parse(tokens)
 
-            # Implicit fn-call convention:
+            # Implicit function-call convention:
             # If the expression is a Link chain ending with a non-operator
             # symbol (a function name), treat preceding items as args and
-            # wrap as (args... (quote params) (quote body) fn).
+            # wrap as (args... '(params) 'body closure apply).
             elems = _link_to_list(entry_expr) if entry_expr.base == "link" else []
             if (
                 len(elems) >= 2
                 and elems[-1].base == "symbol"
-                and elems[-1].value not in _OPERATOR_SYMBOLS
+                and elems[-1].value not in OPERATOR_LIST
             ):
                 func_name = elems[-1].value
                 args = elems[:-1]
+
+                if len(args) > MAX_CALL_ARGS:
+                    sys.stdout.write(
+                        f"error: at most {MAX_CALL_ARGS} arguments, got {len(args)}\n"
+                    )
+                    sys.stdout.flush()
+                    return 1
 
                 if script is None:
                     sys.stdout.write(f"error: implicit fn-call requires --script\n")
@@ -134,16 +152,3 @@ def eval_lang(
         sys.stdout.flush()
         return 0
     return 0
-
-
-_OPERATOR_SYMBOLS = {
-    "+", "add", "-", "sub", "*", "mul", "/", "div", "%", "mod",
-    "&", "and", "|", "or", "^", "xor",
-    "<<", ">>>", ">>", "rol", "ror",
-    "fadd", "fsub", "fmul", "fdiv", "fsqrt",
-    "~", "not",
-    "fn", "if", "def",
-    "link", "head", "tail", "is_atom", "is_eq",
-    "quote",
-    "spawn", "send", "receive",
-}

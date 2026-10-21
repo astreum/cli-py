@@ -62,7 +62,7 @@ python main.py --tui
 ### Evaluation mode
 Evaluate a postfix expression:
 ```bash
-python main.py --eval --expr "(1 2 add)"
+python main.py --eval --expr "(1 2 +)"
 ```
 
 Evaluate a script file (default entry):
