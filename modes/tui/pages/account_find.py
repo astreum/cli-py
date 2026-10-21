@@ -5,6 +5,7 @@ from ..element import PageElement
 
 from astreum.consensus.block.encoding.decode import get_block_from_storage
 from astreum.consensus.models.accounts import Accounts
+from astreum.crypto.bloom_search.block_search import find_block_by_height
 from astreum.expression import ZERO32
 
 
@@ -87,13 +88,18 @@ class AccountSearchPage(BasePage):
                 except ValueError:
                     app.flash_message = "Invalid block height after #."
                     return
-                cur = app.node.latest_block
-                while cur is not None and cur.height > target_height:
-                    cur = cur.previous_block
-                if cur is None or cur.height != target_height:
+                try:
+                    block = find_block_by_height(
+                        app.node,
+                        starting_block=app.node.latest_block,
+                        target_height=target_height,
+                    )
+                except Exception as exc:
+                    app.flash_message = f"Lookup failed: {exc}"
+                    return
+                if block is None:
                     app.flash_message = f"Block at height #{target_height} not found."
                     return
-                block = cur
             elif block_str.startswith("0x"):
                 # Resolve by hash
                 try:
