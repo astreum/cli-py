@@ -13,7 +13,7 @@ router = APIRouter()
 @router.get("/chain/{chain_id}")
 def get_chain(chain_id: int, node=Depends(require_node)):
     """Return the latest block for *chain_id*, or null if not tracked."""
-    node_chain_id = node.config.get("chain_id")
+    node_chain_id = node.config.chain_id
     if chain_id != node_chain_id:
         raise HTTPException(
             status_code=404,

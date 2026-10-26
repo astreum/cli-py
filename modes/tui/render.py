@@ -22,7 +22,7 @@ def build_block_summary(node) -> str:
     return f"  Block #{height}  \u2502  0x{expr_hex}  \u2502  {time_str}"
 
 def build_node_status(node) -> str:
-    chain = node.config.get("chain", "unknown")
+    chain = node.config.chain
     connected = "connected" if getattr(node, "is_connected", False) else "disconnected"
     peer_count = len(getattr(node, "peers", {}))
     peer_word = "peer" if peer_count == 1 else "peers"

@@ -92,36 +92,7 @@ def submit_transaction(payload: dict = Body(...), node=Depends(require_node)):
             "tx_hash": tx_hash.hex() if isinstance(tx_hash, bytes) else str(tx_hash),
             "message": "Transaction validated and broadcasted successfully.",
         }
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=f"Transaction not sent: {exc}")
     except Exception as exc:
-        # Self-validating node: there is no external validator route to
-        # broadcast to. Persist the tx locally and enqueue it for the local
-        # validation worker to include in the next block.
-        try:
-            _enqueue_locally(node, tx)
-            return {
-                "success": True,
-                "tx_hash": (tx.expr().hash()).hex(),
-                "message": "Transaction validated and enqueued locally (no external validator route).",
-            }
-        except Exception as local_exc:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Broadcast failed: {exc}; local enqueue failed: {local_exc}",
-            )
-
-
-def _enqueue_locally(node, tx) -> None:
-    """Persist a transaction's exprs and submit it to the local validation queue."""
-    from astreum.expression import resolve_inner_exprs
-    from astreum.storage import put_expr_in_cold_storage, put_expr_in_hot_storage
-
-    tx_exprs, missed = resolve_inner_exprs(node, tx.expr())
-    if missed:
-        raise RuntimeError("transaction data unavailable locally")
-
-    for tx_expr in tx_exprs:
-        put_expr_in_hot_storage(node, tx_expr)
-        put_expr_in_cold_storage(node, tx_expr)
-
-    tx.hash = tx.expr().hash()
-    node._validation_transaction_queue.put(tx)
+        raise HTTPException(status_code=500, detail=f"Broadcast failed: {exc}")

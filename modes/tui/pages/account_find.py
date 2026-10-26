@@ -62,7 +62,7 @@ class AccountSearchPage(BasePage):
             app.flash_message = "Chain ID must be an integer."
             return
 
-        node_chain_id = app.node.config.get("chain_id")
+        node_chain_id = app.node.config.chain_id
         if node_chain_id is not None and chain_id != node_chain_id:
             app.flash_message = (
                 f"Node is not tracking chain {chain_id} "
