@@ -84,6 +84,12 @@ def submit_transaction(payload: dict = Body(...), node=Depends(require_node)):
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Transaction validation failed: {exc}")
 
+    if not tx.verify_signature():
+        raise HTTPException(
+            status_code=400,
+            detail="Transaction signature does not match its fields",
+        )
+
     # 5. Broadcast via core library send_transaction
     try:
         tx_hash = send_transaction(node, tx)
