@@ -48,7 +48,10 @@ def start_latest_block_hash_poller(
                         if logger:
                             logger.debug("Calling get_block_from_storage for %s", current.hex()[:16])
                         from astreum.consensus.block.encoding.decode import get_block_from_storage
-                        node.latest_block = get_block_from_storage(node, current)
+                        from astreum.consensus.block.holders import block_holder
+                        node.latest_block = get_block_from_storage(
+                            node, current, contact=block_holder(node, current)
+                        )
                         if logger:
                             logger.debug("get_block_from_storage succeeded for %s", current.hex()[:16])
                         if current != last_written:

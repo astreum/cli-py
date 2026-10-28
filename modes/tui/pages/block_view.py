@@ -4,6 +4,7 @@ from ..base import BasePage
 from ..element import PageElement
 
 from astreum.consensus.block.encoding.decode import get_block_from_storage
+from astreum.consensus.block.holders import block_holder
 from astreum.crypto.bloom_search.block_search import find_block_by_height
 from astreum.expression import ZERO32
 
@@ -80,7 +81,9 @@ class BlockSearchPage(BasePage):
             self.elements = []
             return
         try:
-            block = get_block_from_storage(app.node, head_hash)
+            block = get_block_from_storage(
+                app.node, head_hash, contact=block_holder(app.node, head_hash)
+            )
         except Exception:
             self._results_body = "Latest block not loaded yet."
             self.elements = []
@@ -116,7 +119,9 @@ class BlockSearchPage(BasePage):
                     self.elements = []
                     return
                 try:
-                    start = get_block_from_storage(app.node, head_hash)
+                    start = get_block_from_storage(
+                        app.node, head_hash, contact=block_holder(app.node, head_hash)
+                    )
                 except Exception:
                     self._results_body = "Latest block not loaded yet."
                     self.elements = []

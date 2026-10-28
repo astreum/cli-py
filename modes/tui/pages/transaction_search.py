@@ -6,6 +6,7 @@ from ..base import BasePage
 from ..element import PageElement
 
 from astreum.consensus.block.encoding.decode import get_block_from_storage
+from astreum.consensus.block.holders import block_holder
 from astreum.consensus.transaction.from_storage import get_transaction_from_storage
 from astreum.crypto.bloom_search import bloom_search_tx
 from astreum.expression import ZERO32
@@ -140,7 +141,9 @@ class TransactionSearchPage(BasePage):
             self.elements = []
             return
         try:
-            starting_block = get_block_from_storage(app.node, head_hash)
+            starting_block = get_block_from_storage(
+                app.node, head_hash, contact=block_holder(app.node, head_hash)
+            )
         except Exception:
             self._results_body = "Latest block not loaded yet."
             self.elements = []
