@@ -5,6 +5,7 @@ import hashlib
 from ..base import BasePage
 from ..element import PageElement
 
+from astreum.consensus.block.encoding.decode import get_block_from_storage
 from astreum.consensus.transaction.from_storage import get_transaction_from_storage
 from astreum.crypto.bloom_search import bloom_search_tx
 from astreum.expression import ZERO32
@@ -133,9 +134,15 @@ class TransactionSearchPage(BasePage):
             app.flash_message = "Invalid hex in input (try toggling flag_data to hash)"
             return
 
-        starting_block = app.node.latest_block
-        if starting_block is None:
+        head_hash = app.node.latest_block_hash
+        if head_hash is None:
             self._results_body = "Node has no blocks yet."
+            self.elements = []
+            return
+        try:
+            starting_block = get_block_from_storage(app.node, head_hash)
+        except Exception:
+            self._results_body = "Latest block not loaded yet."
             self.elements = []
             return
 

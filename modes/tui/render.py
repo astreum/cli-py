@@ -1,25 +1,15 @@
 import os
 import sys
-from datetime import datetime, timezone
 from typing import List, Optional, Tuple
 
 CURSOR_STYLE = "\x1b[47m\x1b[30m"
 CURSOR_RESET = "\x1b[0m"
 
 def build_block_summary(node) -> str:
-    block = getattr(node, "latest_block", None)
-    if block is None:
-        attempts = getattr(node, "_block_fetch_attempts", 0)
-        return f"  No blocks yet! ({attempts} queries)"
-    height = block.height
-    expr_hex = block.expr_id.hex()[:16] if block.expr_id else "0000000000000000"
-    ts = block.timestamp
-    if ts:
-        dt = datetime.fromtimestamp(ts, tz=timezone.utc)
-        time_str = dt.strftime("%Y-%m-%d %H:%M UTC")
-    else:
-        time_str = "---"
-    return f"  Block #{height}  \u2502  0x{expr_hex}  \u2502  {time_str}"
+    head_hash = getattr(node, "latest_block_hash", None)
+    if head_hash is None:
+        return "  No blocks yet!"
+    return f"  Block  \u2502  0x{head_hash.hex()[:16]}"
 
 def build_node_status(node) -> str:
     chain = node.config.chain

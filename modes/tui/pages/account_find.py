@@ -87,10 +87,19 @@ class AccountSearchPage(BasePage):
                 except ValueError:
                     app.flash_message = "Invalid block height after #."
                     return
+                head_hash = app.node.latest_block_hash
+                if head_hash is None:
+                    app.flash_message = "Node has no blocks yet."
+                    return
+                try:
+                    start = get_block_from_storage(app.node, head_hash)
+                except Exception:
+                    app.flash_message = "Latest block not loaded yet."
+                    return
                 try:
                     block = find_block_by_height(
                         app.node,
-                        starting_block=app.node.latest_block,
+                        starting_block=start,
                         target_height=target_height,
                     )
                 except Exception as exc:
@@ -115,7 +124,13 @@ class AccountSearchPage(BasePage):
                 app.flash_message = "Block must start with # (height) or 0x (hash), or be empty for latest."
                 return
         else:
-            block = app.node.latest_block
+            head_hash = app.node.latest_block_hash
+            if head_hash is not None:
+                try:
+                    block = get_block_from_storage(app.node, head_hash)
+                except Exception:
+                    app.flash_message = "Latest block not loaded yet."
+                    return
 
         if block is None:
             self._results_body = "Node has no blocks yet."

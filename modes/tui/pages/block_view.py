@@ -32,8 +32,8 @@ class BlockSearchPage(BasePage):
 
         self.elements = [
             PageElement(label="Filter"),
-            PageElement(label="Hash (0x...)", input=[hash_val]),
-            PageElement(label="Height (#...)", input=[height_val]),
+            PageElement(label="Hash", input=[hash_val]),
+            PageElement(label="Height", input=[height_val]),
             PageElement(label="[Latest]", action=self._do_latest),
             PageElement(label="[Fetch]", action=self._do_fetch),
             PageElement(label="Result"),
@@ -74,9 +74,15 @@ class BlockSearchPage(BasePage):
         return "\n".join(lines)
 
     def _do_latest(self, app):
-        block = app.node.latest_block
-        if block is None:
+        head_hash = app.node.latest_block_hash
+        if head_hash is None:
             self._results_body = "Node has no blocks yet."
+            self.elements = []
+            return
+        try:
+            block = get_block_from_storage(app.node, head_hash)
+        except Exception:
+            self._results_body = "Latest block not loaded yet."
             self.elements = []
             return
         self._results_body = self._format_block(block)
@@ -104,9 +110,15 @@ class BlockSearchPage(BasePage):
             else:
                 # Look up by height
                 target = int(height_str.removeprefix("#"))
-                start = app.node.latest_block
-                if start is None:
+                head_hash = app.node.latest_block_hash
+                if head_hash is None:
                     self._results_body = "Node has no blocks yet."
+                    self.elements = []
+                    return
+                try:
+                    start = get_block_from_storage(app.node, head_hash)
+                except Exception:
+                    self._results_body = "Latest block not loaded yet."
                     self.elements = []
                     return
                 block = find_block_by_height(
