@@ -80,6 +80,7 @@ class App:
         self.lines = []
         self.line_offset = 0
         self.header_lines = None
+        self.body_lines = None
         self.flash_message = None
         self.cursor_position = None
         self._run_cli_startup_actions()
@@ -134,24 +135,49 @@ class App:
             
             element.navigate_input(direction=direction)
         else:
-            if direction == "up":
-                if self.line_offset > 0:
-                    self.line_offset -= 1
-                self.pages[self.active_view].navigate(forward=False)
+            page = self.pages[self.active_view]
+            forward = direction == "down"
+            if direction in ("up", "down"):
+                if not page.has_selectable():
+                    if direction == "up":
+                        if self.line_offset > 0:
+                            self.line_offset -= 1
+                    else:
+                        max_offset = max(0, len(self.lines) - self.window_rows)
+                        if self.line_offset < max_offset:
+                            self.line_offset += 1
+                elif self._scroll_inside_focused(direction):
+                    return
+                page.navigate(forward=forward)
                 return
-            if direction == "down":
-                max_offset = max(0, len(self.lines) - self.window_rows)
-                if self.line_offset < max_offset:
-                    self.line_offset += 1
-                self.pages[self.active_view].navigate(forward=True)
-                return
+
+    def _scroll_inside_focused(self, direction: str) -> bool:
+        """Scroll within a focused element taller than the window; True if scrolled."""
+        page = self.pages[self.active_view]
+        if not self.body_lines or not (0 <= page.index < len(page.element_spans)):
+            return False
+        span_start, span_end = page.element_spans[page.index]
+        start = self.body_lines[0] + span_start
+        end = self.body_lines[0] + span_end
+        if end - start + 1 <= self.window_rows:
+            return False
+        if direction == "down" and end >= self.line_offset + self.window_rows:
+            self.line_offset += 1
+            return True
+        if direction == "up" and self.line_offset > start:
+            self.line_offset -= 1
+            return True
+        return False
 
     def handle_enter(self) -> bool:
         element = self.element_in_focus()
-        if element is None:
+        if element is None or not element.selectable:
             return
 
-        if element.input:
+        if element.options:
+            element.cycle_option()
+
+        elif element.input:
             if self.input_focus:
                 element.handle_input_enter()
 

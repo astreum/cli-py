@@ -59,6 +59,11 @@ Settings persist to `settings.json` in the app data directory when saved from th
 python main.py --tui
 ```
 
+The Settings page has two sections:
+
+- **VALIDATION**: save or delete the validator key from an account stored under `accounts/`.
+- **STORAGE**: the Long Term Provider toggle. Press Enter to switch it between Off and On. "Save Storage Settings" can be selected only after the toggle differs from the saved value. It writes `node.is_storage_provider` to `settings.json`. Restart the CLI to apply it.
+
 ### Evaluation mode
 Evaluate a postfix expression:
 ```bash

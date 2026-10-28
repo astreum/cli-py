@@ -1,5 +1,5 @@
 
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Any, Callable, List, Optional, Tuple, Union
 
 
 class PageElement:
@@ -10,7 +10,11 @@ class PageElement:
         action: Optional[Callable[..., Any]] = None,
         input_index: Tuple[int, int] = (0, 0),
         next: Optional[str] = None,
-        body: Optional[str] = None
+        body: Optional[str] = None,
+        header: bool = False,
+        options: Optional[List[str]] = None,
+        selected: int = 0,
+        enabled: Union[bool, Callable[[], bool]] = True,
     ) -> None:
         self.label = label
         self.input = input
@@ -18,10 +22,48 @@ class PageElement:
         self.input_index = input_index
         self.next = next
         self.body = body
+        self.header = header
+        self.options = options
+        self.selected = selected
+        self.enabled = enabled
+
+    @property
+    def is_enabled(self) -> bool:
+        if callable(self.enabled):
+            return bool(self.enabled())
+        return bool(self.enabled)
+
+    @property
+    def selectable(self) -> bool:
+        return not self.header and self.is_enabled
+
+    @property
+    def selected_option(self) -> Optional[str]:
+        if not self.options:
+            return None
+        return self.options[self.selected % len(self.options)]
+
+    def cycle_option(self) -> None:
+        if not self.options:
+            return
+        self.selected = (self.selected + 1) % len(self.options)
 
     def render(self, focus: bool = False) -> List[str]:
-        prefix = "> " if focus else "  "
-        lines: List[str] = [f"{prefix}{self.label}"]
+        if self.header:
+            return [f"\x1b[1m{self.label}\x1b[0m"]
+
+        enabled = self.is_enabled
+        prefix = "> " if focus and enabled else "  "
+        label = self.label if enabled else f"\x1b[2m{self.label}\x1b[0m"
+
+        if self.options:
+            choices = "  ".join(
+                f"[{'x' if i == self.selected else ' '}] {name}"
+                for i, name in enumerate(self.options)
+            )
+            lines: List[str] = [f"{prefix}{label}", f"  {choices}"]
+        else:
+            lines = [f"{prefix}{label}"]
 
         if self.input:
             for line in self.input:

@@ -19,6 +19,17 @@ def build_node_status(node) -> str:
     return f"  {chain}  \u2502  {connected}  \u2502  {peer_count} {peer_word}"
 
 
+def scroll_to_span(offset: int, rows: int, start: int, end: int) -> int:
+    """Return the line offset that keeps lines start..end inside the window."""
+    if end - start + 1 > rows:
+        return max(start, min(offset, end - rows + 1))
+    if start < offset:
+        return start
+    if end >= offset + rows:
+        return end - rows + 1
+    return offset
+
+
 def apply_cursor_overlay(line: str, col: int, width: int) -> str:
     if col < 0 or col >= width:
         return line
@@ -104,5 +115,12 @@ def render_app(app) -> None:
 
     app.window_cols = cols
     app.window_rows = rows
+
+    if page.has_selectable() and 0 <= page.index < len(page.element_spans):
+        span_start, span_end = page.element_spans[page.index]
+        app.line_offset = scroll_to_span(
+            app.line_offset, rows, body_start + span_start, body_start + span_end
+        )
+        app.line_offset = max(0, min(app.line_offset, max(0, len(lines) - rows)))
 
     draw(app=app)
