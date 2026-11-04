@@ -58,7 +58,7 @@ def _serialize_block(block, node=None) -> dict:
         "height": block.height,
         "previous_block_hash": hex_encode(block.previous_block_hash),
         "timestamp": block.timestamp,
-        "difficulty": block.difficulty,
+        "validation_difficulty": block.validation_difficulty,
         "accounts_hash": hex_encode(block.accounts_hash),
         "transactions_hash": hex_encode(block.transactions_hash),
         "receipts_hash": hex_encode(block.receipts_hash),
