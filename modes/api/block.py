@@ -14,31 +14,12 @@ router = APIRouter()
 MAX_CURVE_DURATION = 1 << 40
 
 
-def _reward_blocks(previous_height: int, duration: int) -> int:
-    """Blocks covered by the windowed measure, mirroring the lib's blend.
-
-    All-time covers heights 0..previous_height. A pow2 window blends the
-    completed previous window (duration blocks) with the in-progress window
-    (previous_height % duration + 1 blocks) using the same alpha as
-    windowed_rate_fraction, truncated like the lib's int() fee/stake blend.
-    """
-    if duration == 0:
-        return previous_height + 1
-    progress = previous_height % duration
-    alpha = progress / duration
-    return int((1 - alpha) * duration + alpha * (progress + 1))
-
-
 def _rate_curve(block, node=None) -> list[dict]:
     """Discount rate across windowed durations — the chain's yield curve.
 
     Duration 0 is the all-time rate; further entries are pow2 block windows
-    (1, 2, 4, ...) while statistics for the window are available.
-
-    The per-block base validator reward (max(total_fee, 1)) is included as
-    fee income: window fees are incremented by the number of blocks the
-    window covers. Exact for chains without fee-bearing blocks; overcounts
-    by one per fee-bearing block otherwise.
+    (1, 2, 4, ...) while statistics for the window are available. The fee
+    totals in the statistics already count the base validator reward.
     """
     if block.previous_block is None and node is not None:
         prev_hash = getattr(block, "previous_block_hash", None)
@@ -49,10 +30,8 @@ def _rate_curve(block, node=None) -> list[dict]:
                 )
             except Exception:
                 pass
-    previous_block = block.previous_block
-    if previous_block is None:
+    if block.previous_block is None:
         return []
-    previous_height = previous_block.height or 0
 
     curve = []
     duration = 0
@@ -64,8 +43,7 @@ def _rate_curve(block, node=None) -> list[dict]:
         if fraction is None:
             break
         fee, stake = fraction
-        rate = (fee + _reward_blocks(previous_height, duration)) / stake
-        curve.append({"duration": duration, "rate": rate})
+        curve.append({"duration": duration, "rate": fee / stake})
         duration = 1 if duration == 0 else duration * 2
     return curve
 
