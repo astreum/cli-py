@@ -53,21 +53,22 @@ class AccountSearchPage(BasePage):
         block_str = self._input("Block")
 
         if not address:
-            app.flash_message = "Address is required."
+            app.flash("Address is required.", "error")
             return
 
         # Validate chain ID
         try:
             chain_id = int(chain_id_str)
         except ValueError:
-            app.flash_message = "Chain ID must be an integer."
+            app.flash("Chain ID must be an integer.", "error")
             return
 
         node_chain_id = app.node.config.chain_id
         if node_chain_id is not None and chain_id != node_chain_id:
-            app.flash_message = (
+            app.flash(
                 f"Node is not tracking chain {chain_id} "
-                f"(configured chain_id={node_chain_id})"
+                f"(configured chain_id={node_chain_id})",
+                "error",
             )
             return
 
@@ -75,7 +76,7 @@ class AccountSearchPage(BasePage):
         try:
             address_bytes = bytes.fromhex(address.removeprefix("0x"))
         except ValueError:
-            app.flash_message = "Invalid hex in Address."
+            app.flash("Invalid hex in Address.", "error")
             return
 
         # Resolve block
@@ -86,18 +87,18 @@ class AccountSearchPage(BasePage):
                 try:
                     target_height = int(block_str[1:])
                 except ValueError:
-                    app.flash_message = "Invalid block height after #."
+                    app.flash("Invalid block height after #.", "error")
                     return
                 head_hash = app.node.latest_block_hash
                 if head_hash is None:
-                    app.flash_message = "Node has no blocks yet."
+                    app.flash("Node has no blocks yet.", "info")
                     return
                 try:
                     start = get_block_from_storage(
                         app.node, head_hash, contact=block_holder(app.node, head_hash)
                     )
                 except Exception:
-                    app.flash_message = "Latest block not loaded yet."
+                    app.flash("Latest block not loaded yet.", "info")
                     return
                 try:
                     block = find_block_by_height(
@@ -106,25 +107,25 @@ class AccountSearchPage(BasePage):
                         target_height=target_height,
                     )
                 except Exception as exc:
-                    app.flash_message = f"Lookup failed: {exc}"
+                    app.flash(f"Lookup failed: {exc}", "error")
                     return
                 if block is None:
-                    app.flash_message = f"Block at height #{target_height} not found."
+                    app.flash(f"Block at height #{target_height} not found.", "error")
                     return
             elif block_str.startswith("0x"):
                 # Resolve by hash
                 try:
                     block_hash_bytes = bytes.fromhex(block_str[2:])
                 except ValueError:
-                    app.flash_message = "Invalid hex in block hash."
+                    app.flash("Invalid hex in block hash.", "error")
                     return
                 try:
                     block = get_block_from_storage(app.node, block_hash_bytes)
                 except ValueError:
-                    app.flash_message = "Block not found for that hash."
+                    app.flash("Block not found for that hash.", "error")
                     return
             else:
-                app.flash_message = "Block must start with # (height) or 0x (hash), or be empty for latest."
+                app.flash("Block must start with # (height) or 0x (hash), or be empty for latest.", "error")
                 return
         else:
             head_hash = app.node.latest_block_hash
@@ -134,7 +135,7 @@ class AccountSearchPage(BasePage):
                         app.node, head_hash, contact=block_holder(app.node, head_hash)
                     )
                 except Exception:
-                    app.flash_message = "Latest block not loaded yet."
+                    app.flash("Latest block not loaded yet.", "info")
                     return
 
         if block is None:
@@ -157,7 +158,7 @@ class AccountSearchPage(BasePage):
         try:
             account = accounts.get_account(address_bytes, app.node)
         except Exception as exc:
-            app.flash_message = f"Failed to load account: {exc}"
+            app.flash(f"Failed to load account: {exc}", "error")
             return
 
         if account is None:

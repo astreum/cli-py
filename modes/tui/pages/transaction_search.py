@@ -108,13 +108,13 @@ class TransactionSearchPage(BasePage):
             try:
                 tx_bytes = bytes.fromhex(tx_hash_val.removeprefix("0x"))
             except ValueError:
-                app.flash_message = "Invalid hex in Tx Hash."
+                app.flash("Invalid hex in Tx Hash.", "error")
                 return
 
             try:
                 tx = get_transaction_from_storage(app.node, tx_bytes)
             except ValueError as exc:
-                app.flash_message = f"Transaction not found: {exc}"
+                app.flash(f"Transaction not found: {exc}", "error")
                 return
 
             self._results_body = self._format_tx(tx)
@@ -123,7 +123,7 @@ class TransactionSearchPage(BasePage):
 
         # Bloom filter search
         if not any([id_val, sender_val, recipient_val]):
-            app.flash_message = "Provide a Tx Hash or at least one filter field (ID, Sender, Recipient)"
+            app.flash("Provide a Tx Hash or at least one filter field (ID, Sender, Recipient)", "error")
             return
 
         do_hash = self.flag_data
@@ -132,7 +132,7 @@ class TransactionSearchPage(BasePage):
             sender_bytes = self._hex_or_hash(sender_val, do_hash) if sender_val else ZERO32
             recipient_bytes = self._hex_or_hash(recipient_val, do_hash) if recipient_val else ZERO32
         except ValueError:
-            app.flash_message = "Invalid hex in input (try toggling flag_data to hash)"
+            app.flash("Invalid hex in input (try toggling flag_data to hash)", "error")
             return
 
         head_hash = app.node.latest_block_hash
@@ -161,7 +161,7 @@ class TransactionSearchPage(BasePage):
                 limit=20,
             )
         except Exception as exc:
-            app.flash_message = f"Search error: {exc}"
+            app.flash(f"Search error: {exc}", "error")
             return
 
         if not results:

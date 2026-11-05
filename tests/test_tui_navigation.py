@@ -96,6 +96,7 @@ def make_app(page):
     app.input_focus = False
     app.previous_view = None
     app.flash_message = None
+    app.flash_level = "info"
     app.lines = ["x"] * 50
     app.window_rows = 10
     app.line_offset = 5

@@ -8,7 +8,7 @@ from utils.config import persist_node_latest_block_hash, load_validator_private_
 from utils.latest_block import start_latest_block_hash_poller
 from astreum import Node, validate_blockchain, verify_blockchain
 from astreum.communication.node import connect_node
-from modes.tui.render import render_app
+from modes.tui.render import FLASH_STYLES, render_app
 from modes.tui.pages.accounts.create import AccountCreatePage
 from modes.tui.pages.accounts.list import AccountListPage
 from modes.tui.pages.account_find import AccountSearchPage
@@ -46,7 +46,8 @@ class App:
     lines: List[str]
     header_lines: Optional[Tuple[int, int]]
     body_lines: Optional[Tuple[int, int]]
-    flash_message: None
+    flash_message: Optional[str]
+    flash_level: str
 
     def __init__(self, *, data_dir: Path, configs: dict[str, Any], node: Node) -> None:
         self.data_dir = data_dir
@@ -82,10 +83,30 @@ class App:
         self.header_lines = None
         self.body_lines = None
         self.flash_message = None
+        self.flash_level = "info"
         self.cursor_position = None
         self._run_cli_startup_actions()
         
         self.should_exit = False
+
+    def flash(self, text: str, level: str = "info") -> None:
+        if level not in FLASH_STYLES:
+            raise ValueError(f"Unknown flash level: {level}")
+        self.flash_message = text
+        self.flash_level = level
+
+    def flash_now(self, text: str, level: str = "busy") -> None:
+        self.flash(text, level)
+        render_app(self)
+
+    def clear_flash(self) -> None:
+        self.flash_message = None
+        self.flash_level = "info"
+
+    def go_to(self, view: str, previous: Optional[str] = None) -> None:
+        self.previous_view = previous
+        self.active_view = view
+        self.clear_flash()
 
     def _run_cli_startup_actions(self) -> None:
         """Invoke optional CLI startup actions configured via settings."""
@@ -185,8 +206,7 @@ class App:
                 self.input_focus = True
 
         elif element.next:
-            self.previous_view = self.active_view
-            self.active_view = element.next
+            self.go_to(element.next, previous=self.active_view)
         
         elif element.action:
             element.action(app=self)
@@ -201,19 +221,11 @@ class App:
                 element.handle_input_delete()
         
     def handle_return(self):
-        if self.flash_message:
-            self.flash_message = None
-            return
-            
         if self.input_focus:
             self.input_focus = False
             return
-        
-        if self.previous_view is not None:
-            self.active_view = self.previous_view
-            self.previous_view = None
-        else:
-            self.active_view = "menu"
+
+        self.go_to(self.previous_view or "menu")
     
     def handle_char(self, key):
         if not self.input_focus:

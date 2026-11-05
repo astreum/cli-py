@@ -5,6 +5,28 @@ from typing import List, Optional, Tuple
 CURSOR_STYLE = "\x1b[47m\x1b[30m"
 CURSOR_RESET = "\x1b[0m"
 
+FLASH_STYLES = {
+    "info": "",
+    "success": "\x1b[32m",
+    "error": "\x1b[31m",
+    "busy": "\x1b[33m",
+}
+FLASH_RESET = "\x1b[0m"
+
+
+def build_flash_line(text: Optional[str], level: str, width: int) -> str:
+    """Return the flash line, color codes included, in at most `width` characters."""
+    if not text:
+        return ""
+    text = text.replace("\n", " ")
+    if level == "busy":
+        text = f"{text}\u2026"
+    style = FLASH_STYLES[level]
+    overhead = len(style) + len(FLASH_RESET)
+    if not style or width - overhead < 1:
+        return text[:width]
+    return f"{style}{text[:width - overhead]}{FLASH_RESET}"
+
 def build_block_summary(node) -> str:
     head_hash = getattr(node, "latest_block_hash", None)
     if head_hash is None:
@@ -74,6 +96,15 @@ def draw(app: "App"):
 
 def render_app(app) -> None:
     """Render the shared header/body layout for an app instance."""
+    try:
+        cols, rows = os.get_terminal_size()
+    except OSError:
+        cols, rows = 256, 128
+
+    # Clamp to the max size we support.
+    cols = min(cols, 256)
+    rows = min(rows, 128)
+
     lines: List[str] = ["","",""]
 
     lines.extend(app.header_block)
@@ -82,9 +113,8 @@ def render_app(app) -> None:
     lines.append(build_node_status(app.node))
     lines.append("")
 
-    if app.flash_message:
-        lines.append(app.flash_message)
-        lines.append("")
+    lines.append(build_flash_line(app.flash_message, app.flash_level, cols))
+    lines.append("")
 
     body_start = len(lines)
     page = app.pages.get(app.active_view)
@@ -103,15 +133,6 @@ def render_app(app) -> None:
     app.cursor_position = None
     if cursor_pos is not None and app.input_focus:
         app.cursor_position = (body_start + cursor_pos[0], cursor_pos[1])
-
-    try:
-        cols, rows = os.get_terminal_size()
-    except OSError:
-        cols, rows = 256, 128
-
-    # Clamp to the max size we support.
-    cols = min(cols, 256)
-    rows = min(rows, 128)
 
     app.window_cols = cols
     app.window_rows = rows

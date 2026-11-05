@@ -101,7 +101,7 @@ class BlockSearchPage(BasePage):
         height_str = self._input("Height")
 
         if not hash_str and not height_str:
-            app.flash_message = "Provide a hash or height."
+            app.flash("Provide a hash or height.", "error")
             return
 
         try:
@@ -132,10 +132,10 @@ class BlockSearchPage(BasePage):
                     target_height=target,
                 )
         except ValueError as exc:
-            app.flash_message = f"Invalid input: {exc}"
+            app.flash(f"Invalid input: {exc}", "error")
             return
         except Exception as exc:
-            app.flash_message = f"Lookup failed: {exc}"
+            app.flash(f"Lookup failed: {exc}", "error")
             return
 
         if block is None:

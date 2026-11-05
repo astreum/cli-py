@@ -32,7 +32,7 @@ class AccountCreatePage(BasePage):
         candidate_path = accounts_dir / f"{slug}.txt"
 
         if candidate_path.exists():
-            app.flash_message = f"Account name `{name}` already in use!"
+            app.flash(f"Account name `{name}` already in use!", "error")
             return
 
         private_key = ed25519.Ed25519PrivateKey.generate()
@@ -44,7 +44,7 @@ class AccountCreatePage(BasePage):
         try:
             candidate_path.write_text("0x" + private_bytes.hex())
         except OSError as exc:
-            app.flash_message = f"Failed to save account: {exc}"
-        
-        app.previous_view = "account_create"
-        app.active_view = "account_list"
+            app.flash(f"Failed to save account: {exc}", "error")
+            return
+
+        app.go_to("account_list", previous="account_create")

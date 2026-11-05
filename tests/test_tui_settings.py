@@ -3,7 +3,6 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-from types import SimpleNamespace
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -14,6 +13,18 @@ from modes.tui.pages.settings import SettingsPage
 SAVED_MESSAGE = "Storage settings saved. Restart the CLI to apply."
 
 
+class FakeApp:
+    def __init__(self, data_dir, configs):
+        self.data_dir = data_dir
+        self.configs = configs
+        self.flash_message = None
+        self.flash_level = "info"
+
+    def flash(self, text, level="info"):
+        self.flash_message = text
+        self.flash_level = level
+
+
 class SettingsStorageTests(unittest.TestCase):
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory()
@@ -22,14 +33,23 @@ class SettingsStorageTests(unittest.TestCase):
         self.settings_path = self.data_dir / "settings.json"
 
     def make(self, node_config=None):
-        app = SimpleNamespace(
-            data_dir=self.data_dir,
-            configs={"cli": {}, "node": dict(node_config or {})},
-            flash_message=None,
-        )
+        app = FakeApp(self.data_dir, {"cli": {}, "node": dict(node_config or {})})
         page = SettingsPage()
         page.load_elements(app=app)
         return app, page
+
+    def test_save_flashes_success(self):
+        app, page = self.make()
+        page.elements[5].cycle_option()
+        page._handle_storage_save(app)
+        self.assertEqual(app.flash_level, "success")
+
+    def test_save_failure_flashes_error(self):
+        self.settings_path.write_text("{not json", encoding="utf-8")
+        app, page = self.make()
+        page.elements[5].cycle_option()
+        page._handle_storage_save(app)
+        self.assertEqual(app.flash_level, "error")
 
     def test_layout(self):
         _, page = self.make()

@@ -57,11 +57,11 @@ class SettingsPage(BasePage):
             data.setdefault("node", {})["is_storage_provider"] = value
             save_config(app.data_dir, data)
         except (OSError, ValueError, AttributeError, TypeError) as exc:
-            app.flash_message = f"Failed to update settings: {exc}"
+            app.flash(f"Failed to update settings: {exc}", "error")
             return
 
         app.configs["node"]["is_storage_provider"] = value
-        app.flash_message = "Storage settings saved. Restart the CLI to apply."
+        app.flash("Storage settings saved. Restart the CLI to apply.", "success")
         self.elements = []
         self.index = self.STORAGE_OPTION_INDEX
 
@@ -81,26 +81,26 @@ class SettingsPage(BasePage):
         account_name = account_element.input[0] if account_element.input else ""
         account_name = account_name.strip()
         if not account_name:
-            app.flash_message = "Enter the name of an account stored under accounts/."
+            app.flash("Enter the name of an account stored under accounts/.", "error")
             return
 
         accounts_dir = app.data_dir / "accounts"
         account_path = accounts_dir / f"{account_name}.txt"
         if not account_path.exists():
-            app.flash_message = f"Account '{account_name}' not found."
+            app.flash(f"Account '{account_name}' not found.", "error")
             return
 
         try:
             private_hex = account_path.read_text().strip()
             private_bytes = bytes.fromhex(private_hex.removeprefix("0x"))
         except (OSError, ValueError) as exc:
-            app.flash_message = f"Failed to read account '{account_name}': {exc}"
+            app.flash(f"Failed to read account '{account_name}': {exc}", "error")
             return
 
         try:
             private_key = ed25519.Ed25519PrivateKey.from_private_bytes(private_bytes)
         except ValueError:
-            app.flash_message = "Account file does not contain a valid Ed25519 key."
+            app.flash("Account file does not contain a valid Ed25519 key.", "error")
             return
 
         storage_name = account_path.stem
@@ -114,21 +114,21 @@ class SettingsPage(BasePage):
                 encoding="utf-8",
             )
         except OSError as exc:
-            app.flash_message = f"Failed to update settings: {exc}"
+            app.flash(f"Failed to update settings: {exc}", "error")
             return
 
         input_element = self.elements[self.ACCOUNT_INPUT_INDEX]
         input_element.input = [storage_name]
         input_element.input_index = (0, len(storage_name))
 
-        app.flash_message = f"Validator key saved from account '{storage_name}'. Restart the CLI to apply."
+        app.flash(f"Validator key saved from account '{storage_name}'. Restart the CLI to apply.", "success")
 
         self.elements = []
 
     def _handle_delete(self, app: "App") -> None:
         node_config = app.configs["node"]
         if "validation_secret_key" not in node_config:
-            app.flash_message = "No validator key is configured."
+            app.flash("No validator key is configured.", "info")
             return
 
         node_config.pop("validation_secret_key", None)
@@ -141,13 +141,13 @@ class SettingsPage(BasePage):
                 encoding="utf-8",
             )
         except OSError as exc:
-            app.flash_message = f"Failed to update settings: {exc}"
+            app.flash(f"Failed to update settings: {exc}", "error")
             return
 
         input_element = self.elements[self.ACCOUNT_INPUT_INDEX]
         input_element.input = [""]
         input_element.input_index = (0, 0)
 
-        app.flash_message = "Validator key removed. Restart the CLI to apply."
+        app.flash("Validator key removed. Restart the CLI to apply.", "success")
 
         self.elements = []
