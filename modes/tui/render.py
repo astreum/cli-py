@@ -19,13 +19,13 @@ def build_flash_line(text: Optional[str], level: str, width: int) -> str:
     if not text:
         return ""
     text = text.replace("\n", " ")
-    if level == "busy":
-        text = f"{text}\u2026"
+    suffix = "\u2026" if level == "busy" else ""
     style = FLASH_STYLES[level]
     overhead = len(style) + len(FLASH_RESET)
     if not style or width - overhead < 1:
-        return text[:width]
-    return f"{style}{text[:width - overhead]}{FLASH_RESET}"
+        return f"{text}{suffix}"[:width]
+    room = width - overhead - len(suffix)
+    return f"{style}{text[:room]}{suffix}{FLASH_RESET}"
 
 def build_block_summary(node) -> str:
     head_hash = getattr(node, "latest_block_hash", None)

@@ -4,9 +4,14 @@ import time
 from pathlib import Path
 from typing import Any, List, Optional, Tuple
 
-from utils.config import persist_node_latest_block_hash, load_validator_private_key
+from utils.config import (
+    load_validator_private_key,
+    persist_node_latest_block_hash,
+    update_node_settings,
+)
 from utils.latest_block import start_latest_block_hash_poller
 from astreum import Node, validate_blockchain, verify_blockchain
+from astreum.communication.disconnect import disconnect_node
 from astreum.communication.node import connect_node
 from modes.tui.render import FLASH_STYLES, render_app
 from modes.tui.pages.accounts.create import AccountCreatePage
@@ -306,6 +311,34 @@ class KeyboardInput:
         return ("char", ch)
 
 
+def shutdown_node(app: App) -> list[str]:
+    """Stop the node and save the claim values of a long term provider.
+
+    Returns:
+        The error lines to show the user. Empty when all steps succeed.
+    """
+    if not app.node.is_connected:
+        return []
+    try:
+        app.flash_now("Stopping node")
+    except Exception:
+        pass
+    try:
+        claim_values = disconnect_node(app.node)
+    except Exception as exc:
+        return [f"Failed to stop the node: {exc}"]
+    if not getattr(app.node, "is_storage_provider", False):
+        return []
+    values = {key: value for key, value in claim_values.items() if value is not None}
+    if not values:
+        return []
+    try:
+        update_node_settings(app.data_dir, values)
+    except (OSError, ValueError, TypeError) as exc:
+        return [f"Failed to save the claim values: {exc}"]
+    return []
+
+
 def run_tui(*, data_dir: Path, configs: dict[str, Any], node: Node) -> int:
     app = App(data_dir=data_dir, configs=configs, node=node)
 
@@ -347,16 +380,25 @@ def run_tui(*, data_dir: Path, configs: dict[str, Any], node: Node) -> int:
     except KeyboardInterrupt:
         pass
     finally:
-        if hasattr(app, "stop_latest_block_poller"):
-            app.stop_latest_block_poller()
-        latest_hash = app.node.latest_block_hash
-        if latest_hash is not None:
-            persist_node_latest_block_hash(
-                data_dir=app.data_dir,
-                latest_block_hash=latest_hash,
-                logger=app.node.logger,
-            )
-        sys.stdout.write(f"\033[?1049l\033[?25h")
-        sys.stdout.flush()
+        errors: list[str] = []
+        try:
+            try:
+                if hasattr(app, "stop_latest_block_poller"):
+                    app.stop_latest_block_poller()
+                errors = shutdown_node(app)
+            except KeyboardInterrupt:
+                errors = ["Node stop interrupted. The claim values are not saved."]
+            latest_hash = app.node.latest_block_hash
+            if latest_hash is not None:
+                persist_node_latest_block_hash(
+                    data_dir=app.data_dir,
+                    latest_block_hash=latest_hash,
+                    logger=app.node.logger,
+                )
+        finally:
+            sys.stdout.write(f"\033[?1049l\033[?25h")
+            sys.stdout.flush()
+            for line in errors:
+                print(line, file=sys.stderr)
 
     return 0

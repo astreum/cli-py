@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Any, Optional
 
@@ -109,6 +110,40 @@ def save_config(data_dir: Path, config: dict[str, Any]) -> None:
         encoding="utf-8",
     )
 
+
+def update_node_settings(data_dir: Path, values: dict[str, Any]) -> None:
+    """Set keys under `node` in `settings.json` and keep all other keys.
+
+    The new file is written to `settings.json.tmp` and then moved over
+    `settings.json`, so a failed write does not change the old file.
+
+    Args:
+        data_dir: The directory that holds `settings.json`.
+        values: The `node` keys to set.
+
+    Raises:
+        ValueError: The file is not valid JSON, or its root or its `node`
+            value is not a JSON object.
+        OSError: The file cannot be read or written.
+    """
+    settings_path = data_dir / SETTINGS_FILE_NAME
+    data: Any = {}
+    if settings_path.exists():
+        data = json.loads(settings_path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError("settings.json must hold a JSON object")
+    node = data.setdefault("node", {})
+    if not isinstance(node, dict):
+        raise ValueError('settings.json "node" must be a JSON object')
+    node.update(values)
+
+    tmp_path = settings_path.with_name(SETTINGS_FILE_NAME + ".tmp")
+    try:
+        tmp_path.write_text(json.dumps(data, indent=2, sort_keys=True), encoding="utf-8")
+        os.replace(tmp_path, settings_path)
+    except BaseException:
+        tmp_path.unlink(missing_ok=True)
+        raise
 
 def load_validator_private_key(
     configs: dict[str, Any],

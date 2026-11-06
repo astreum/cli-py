@@ -65,6 +65,12 @@ class FlashLineTests(unittest.TestCase):
             "\x1b[33mStopping node\u2026\x1b[0m",
         )
 
+    def test_cut_busy_text_keeps_ellipsis(self):
+        self.assertEqual(
+            build_flash_line("Stopping node", "busy", 15),
+            "\x1b[33mStopp\u2026\x1b[0m",
+        )
+
     def test_newline_becomes_space(self):
         self.assertEqual(build_flash_line("a\nb", "info", 80), "a b")
 

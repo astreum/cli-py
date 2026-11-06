@@ -4,7 +4,7 @@ import json
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
-from utils.config import load_validator_private_key, save_config
+from utils.config import load_validator_private_key, update_node_settings
 
 from ..base import BasePage
 from ..element import PageElement
@@ -48,14 +48,8 @@ class SettingsPage(BasePage):
 
     def _handle_storage_save(self, app: "App") -> None:
         value = self.elements[self.STORAGE_OPTION_INDEX].selected_option == "On"
-        settings_path = app.data_dir / "settings.json"
         try:
-            if settings_path.exists():
-                data = json.loads(settings_path.read_text(encoding="utf-8"))
-            else:
-                data = {}
-            data.setdefault("node", {})["is_storage_provider"] = value
-            save_config(app.data_dir, data)
+            update_node_settings(app.data_dir, {"is_storage_provider": value})
         except (OSError, ValueError, AttributeError, TypeError) as exc:
             app.flash(f"Failed to update settings: {exc}", "error")
             return
