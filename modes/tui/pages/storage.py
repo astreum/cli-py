@@ -54,6 +54,7 @@ class StoragePage(BasePage):
             *self._section("ROLE", self._role(node, config)),
             *self._section("SPACE", self._space(node, config)),
             *self._section("CLAIM WORKER", self._worker(node)),
+            *self._section("INDEX", self._index(node)),
             *self._section("CLAIMS", self._claims(stats)),
             *self._section("EARNINGS", self._earnings(stats, config)),
         ]
@@ -101,6 +102,32 @@ class StoragePage(BasePage):
                 ("Band", band if band is not None else "Not set"),
                 ("Hash Rate", f"{rate:.1f} /s" if rate else "Not measured"),
                 ("Inclusion Delay", f"{delay} blocks" if delay is not None else "Not measured"),
+            ]
+        )
+
+    @staticmethod
+    def _index(node) -> str:
+        block = getattr(node, "latest_block", None)
+        height = getattr(block, "height", None)
+        announce = getattr(node, "startup_announce", None)
+        if not getattr(node, "is_storage_provider", False):
+            announce_text = "Off"
+        elif announce is None:
+            announce_text = "Waiting"
+        elif announce == "done":
+            announce_text = "Done"
+        else:
+            announce_text = "Running"
+        queued = getattr(node, "new_record_ids", None)
+        return _rows(
+            [
+                ("Latest Block", f"#{height}" if height is not None else "Not loaded"),
+                ("Peers", len(getattr(node, "peers", None) or ())),
+                ("Index Entries", len(getattr(node, "storage_index", None) or ())),
+                ("Known Providers", len(getattr(node, "storage_providers", None) or ())),
+                ("Index Requested", "Yes" if getattr(node, "index_requested", False) else "No"),
+                ("Startup Announce", announce_text),
+                ("New Records Queued", len(queued) if queued is not None else "Off"),
             ]
         )
 

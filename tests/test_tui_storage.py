@@ -118,6 +118,58 @@ class StoragePageTests(unittest.TestCase):
         self.assertEqual(page.title, "Storage")
 
 
+class StoragePageIndexTests(unittest.TestCase):
+    def setUp(self):
+        node = provider_node()
+        node.latest_block = SimpleNamespace(height=12157)
+        node.peers = {"a": 1, "b": 2}
+        node.storage_index = {bytes(32): (0,), bytes([1]) * 32: (0, 1), bytes([2]) * 32: (1,)}
+        node.storage_providers = [b"p0", b"p1"]
+        node.index_requested = True
+        node.startup_announce = "done"
+        node.new_record_ids = [bytes(32)]
+        self.app = SimpleNamespace(node=node, tx_tracker=None)
+
+    def row(self, text, label):
+        return next(line for line in text.splitlines() if line.strip().startswith(label))
+
+    def test_index_section_shows_node_values(self):
+        _, text = page_text(self.app)
+        self.assertIn("INDEX", text)
+        self.assertTrue(self.row(text, "Latest Block").rstrip().endswith("#12157"))
+        self.assertTrue(self.row(text, "Peers").rstrip().endswith("2"))
+        self.assertTrue(self.row(text, "Index Entries").rstrip().endswith("3"))
+        self.assertTrue(self.row(text, "Known Providers").rstrip().endswith("2"))
+        self.assertTrue(self.row(text, "Index Requested").rstrip().endswith("Yes"))
+        self.assertTrue(self.row(text, "Startup Announce").rstrip().endswith("Done"))
+        self.assertTrue(self.row(text, "New Records Queued").rstrip().endswith("1"))
+
+    def test_index_section_comes_after_claim_worker(self):
+        page, _ = page_text(self.app)
+        headers = [element.label for element in page.elements if element.header]
+        self.assertEqual(headers.index("INDEX"), headers.index("CLAIM WORKER") + 1)
+
+    def test_startup_announce_states(self):
+        node = self.app.node
+        node.startup_announce = None
+        _, text = page_text(self.app)
+        self.assertTrue(self.row(text, "Startup Announce").rstrip().endswith("Waiting"))
+        node.startup_announce = iter(())
+        _, text = page_text(self.app)
+        self.assertTrue(self.row(text, "Startup Announce").rstrip().endswith("Running"))
+
+    def test_index_section_with_bare_node(self):
+        app = SimpleNamespace(node=SimpleNamespace(config=SimpleNamespace()), tx_tracker=None)
+        _, text = page_text(app)
+        self.assertTrue(self.row(text, "Latest Block").rstrip().endswith("Not loaded"))
+        self.assertTrue(self.row(text, "Peers").rstrip().endswith("0"))
+        self.assertTrue(self.row(text, "Index Entries").rstrip().endswith("0"))
+        self.assertTrue(self.row(text, "Known Providers").rstrip().endswith("0"))
+        self.assertTrue(self.row(text, "Index Requested").rstrip().endswith("No"))
+        self.assertTrue(self.row(text, "Startup Announce").rstrip().endswith("Off"))
+        self.assertTrue(self.row(text, "New Records Queued").rstrip().endswith("Off"))
+
+
 class MenuTests(unittest.TestCase):
     def test_menu_has_storage_before_settings(self):
         page = MenuPage()
