@@ -69,6 +69,13 @@ class PollerThreadTests(unittest.TestCase):
             self.assertTrue(wait_for(lambda: fetch.call_count >= 2))
         self.assertIs(node.latest_block, old)
 
+    def test_loaded_block_is_not_fetched_again(self):
+        node = make_node(latest_block_hash=HASH_A, latest_block=block(HASH_A))
+        with mock.patch(FETCH) as fetch:
+            self.start(node)
+            time.sleep(0.3)
+        fetch.assert_not_called()
+
     def test_new_hash_loads_the_new_block(self):
         fetched = block(HASH_B)
         node = make_node(latest_block_hash=HASH_B, latest_block=None)

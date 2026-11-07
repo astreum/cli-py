@@ -10,12 +10,18 @@ from utils.forks import persist_node_forks
 def _refresh_latest_block(node, current: bytes) -> bool:
     """Make ``node.latest_block`` the block for ``current``.
 
-    A failed fetch keeps the block that is loaded. A fetched block is stored only if
+    A block already loaded for ``current`` is kept without a fetch. A failed
+    fetch keeps the block that is loaded. A fetched block is stored only if
     ``node.latest_block_hash`` is still ``current``; otherwise the lib has
     moved to a newer hash and the block is dropped.
 
     Returns True if ``node.latest_block`` is the block for ``current``.
     """
+    with node.latest_block_lock:
+        loaded = node.latest_block
+    if loaded is not None and getattr(loaded, "expr_id", None) == current:
+        return True
+
     logger = node.logger
     try:
         if logger:
