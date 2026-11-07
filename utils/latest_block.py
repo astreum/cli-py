@@ -7,6 +7,47 @@ from utils.config import persist_node_latest_block_hash
 from utils.forks import persist_node_forks
 
 
+def _refresh_latest_block(node, current: bytes) -> bool:
+    """Make ``node.latest_block`` the block for ``current``.
+
+    A failed fetch keeps the block that is loaded. A fetched block is stored only if
+    ``node.latest_block_hash`` is still ``current``; otherwise the lib has
+    moved to a newer hash and the block is dropped.
+
+    Returns True if ``node.latest_block`` is the block for ``current``.
+    """
+    logger = node.logger
+    try:
+        if logger:
+            logger.debug("Calling get_block_from_storage for %s", current.hex()[:16])
+        from astreum.consensus.block.encoding.decode import get_block_from_storage
+        from astreum.consensus.block.holders import block_holder
+        fetched = get_block_from_storage(
+            node, current, contact=block_holder(node, current)
+        )
+    except Exception as exc:
+        attempts = getattr(node, "_block_fetch_attempts", 0)
+        node._block_fetch_attempts = attempts + 1
+        if logger:
+            logger.debug(
+                "Block fetch failed for %s (attempt #%s): %s: %s",
+                current.hex()[:16], attempts + 1, type(exc).__name__, exc,
+            )
+        return False
+
+    with node.latest_block_lock:
+        if node.latest_block_hash != current:
+            if logger:
+                logger.debug(
+                    "Dropped block for %s; the latest hash moved on", current.hex()[:16]
+                )
+            return False
+        node.latest_block = fetched
+    if logger:
+        logger.debug("get_block_from_storage succeeded for %s", current.hex()[:16])
+    return True
+
+
 def start_latest_block_hash_poller(
     *,
     node,
@@ -44,31 +85,12 @@ def start_latest_block_hash_poller(
                             latest_block_hash=current,
                             logger=logger,
                         )
-                    try:
-                        if logger:
-                            logger.debug("Calling get_block_from_storage for %s", current.hex()[:16])
-                        from astreum.consensus.block.encoding.decode import get_block_from_storage
-                        from astreum.consensus.block.holders import block_holder
-                        node.latest_block = get_block_from_storage(
-                            node, current, contact=block_holder(node, current)
-                        )
-                        if logger:
-                            logger.debug("get_block_from_storage succeeded for %s", current.hex()[:16])
-                        if current != last_written:
-                            last_written = current
-                            try:
-                                persist_node_forks(data_dir=data_dir, node=node)
-                            except Exception:
-                                pass
-                    except Exception as exc:
-                        node.latest_block = None
-                        attempts = getattr(node, "_block_fetch_attempts", 0)
-                        node._block_fetch_attempts = attempts + 1
-                        if logger:
-                            logger.debug(
-                                "Block fetch failed for %s (attempt #%s): %s: %s",
-                                current.hex()[:16], attempts + 1, type(exc).__name__, exc,
-                            )
+                    if _refresh_latest_block(node, current) and current != last_written:
+                        last_written = current
+                        try:
+                            persist_node_forks(data_dir=data_dir, node=node)
+                        except Exception:
+                            pass
             except Exception:
                 pass
             stop_event.wait(interval)
