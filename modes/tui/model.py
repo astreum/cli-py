@@ -2,7 +2,7 @@ import os
 import sys
 import time
 from pathlib import Path
-from typing import Any, List, Optional, Tuple
+from typing import Any, Callable, List, Optional, Tuple
 
 from utils.config import (
     load_validator_private_key,
@@ -10,6 +10,7 @@ from utils.config import (
     update_node_settings,
 )
 from utils.latest_block import start_latest_block_hash_poller
+from utils.tx_tracker import TransactionTracker, start_transaction_tracker
 from astreum import Node, validate_blockchain, verify_blockchain
 from astreum.communication.disconnect import disconnect_node
 from astreum.communication.node import connect_node
@@ -64,6 +65,16 @@ class App:
             data_dir=self.data_dir,
             poll_interval=poll_interval,
         )
+        self.tx_tracker: Optional[TransactionTracker] = None
+        self.stop_tx_tracker: Callable[[], None] = lambda: None
+        try:
+            self.tx_tracker, self.stop_tx_tracker = start_transaction_tracker(
+                node=self.node,
+                data_dir=self.data_dir,
+                poll_interval=poll_interval,
+            )
+        except Exception as exc:
+            self.node.logger.warning("Transaction tracking is off: %s", exc)
         
         self.header_block = HEADER_LINES
         self.pages = {
@@ -385,6 +396,8 @@ def run_tui(*, data_dir: Path, configs: dict[str, Any], node: Node) -> int:
             try:
                 if hasattr(app, "stop_latest_block_poller"):
                     app.stop_latest_block_poller()
+                if hasattr(app, "stop_tx_tracker"):
+                    app.stop_tx_tracker()
                 errors = shutdown_node(app)
             except KeyboardInterrupt:
                 errors = ["Node stop interrupted. The claim values are not saved."]

@@ -13,6 +13,7 @@ from astreum.communication.node import connect_node
 from utils.config import persist_node_latest_block_hash, load_validator_private_key
 from utils.forks import load_node_forks, persist_node_forks
 from utils.latest_block import start_latest_block_hash_poller
+from utils.tx_tracker import start_transaction_tracker
 
 
 def run_headless(
@@ -39,6 +40,7 @@ def run_headless(
 
     wait_for_disconnect = False
     stop_latest_block_hash_poller_fn = None
+    stop_tx_tracker_fn = None
     try:
         if should_connect:
             sys.stdout.write("connecting node...\n")
@@ -87,6 +89,15 @@ def run_headless(
             data_dir=data_dir,
             poll_interval=poll_interval,
         )
+        try:
+            _, stop_tx_tracker_fn = start_transaction_tracker(
+                node=node,
+                data_dir=data_dir,
+                poll_interval=poll_interval,
+            )
+        except Exception as exc:
+            sys.stdout.write(f"transaction tracking is off: {exc}\n")
+            sys.stdout.flush()
 
         # --- Start API server (if requested) ---
         if serve_api:
@@ -117,6 +128,8 @@ def run_headless(
             _wait_until_node_disconnects(node)
         if stop_latest_block_hash_poller_fn is not None:
             stop_latest_block_hash_poller_fn()
+        if stop_tx_tracker_fn is not None:
+            stop_tx_tracker_fn()
         latest_hash = node.latest_block_hash
         if latest_hash is not None:
             persist_node_latest_block_hash(

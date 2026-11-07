@@ -3,7 +3,7 @@ import dataclasses
 import threading
 from dataclasses import dataclass
 from pathlib import Path
-from typing import NamedTuple, Optional
+from typing import Callable, NamedTuple, Optional
 
 from astreum import find_transactions, get_receipt
 from astreum.consensus.models.receipt import STATUS_SUCCESS
@@ -14,6 +14,7 @@ from astreum.crypto.bloom_search.block_search import find_block_by_height
 SENT_FILE_NAME = "sent_transactions.csv"
 TRACKED_FILE_NAME = "tracked_transactions.csv"
 MAX_CHECKS_PER_PASS = 50
+STOP_TIMEOUT = 2.0
 
 SENT_HEADER = "tx_hash,sender,recipient,code,sent_height,sent_time"
 TRACKED_HEADER = (
@@ -286,3 +287,45 @@ class TransactionTracker:
                 self._stats.fees += fees
             else:
                 self._stats.not_included += 1
+
+
+def start_transaction_tracker(
+    *,
+    node,
+    data_dir: Path,
+    poll_interval: float,
+) -> tuple[TransactionTracker, Callable[[], None]]:
+    """Start a daemon thread that runs `check_due` every `poll_interval` seconds.
+
+    Returns:
+        The tracker and a function that stops the thread. The stop function
+        waits at most `STOP_TIMEOUT` seconds for the thread to end; a check
+        that is still running ends with the process and runs again later.
+
+    Raises:
+        OSError: The tracker cannot read its files. No thread is started.
+    """
+    tracker = TransactionTracker(node, data_dir)
+    stop_event = threading.Event()
+    interval = max(poll_interval, 0.01)
+
+    def _run() -> None:
+        while not stop_event.is_set():
+            try:
+                tracker.check_due(stop_event)
+            except Exception as exc:
+                logger = getattr(node, "logger", None)
+                if logger is not None:
+                    logger.warning(
+                        "Transaction tracker pass failed: %s: %s", type(exc).__name__, exc
+                    )
+            stop_event.wait(interval)
+
+    thread = threading.Thread(target=_run, name="tx-tracker", daemon=True)
+    thread.start()
+
+    def _stop() -> None:
+        stop_event.set()
+        thread.join(timeout=min(interval * 2, STOP_TIMEOUT))
+
+    return tracker, _stop

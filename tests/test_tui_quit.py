@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from modes.tui.model import run_tui, shutdown_node
+from modes.tui.model import App, run_tui, shutdown_node
 
 CLAIM_VALUES = {
     "storage_claim_band": 3,
@@ -151,6 +151,64 @@ class RunTuiQuitTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertLess(out.index(RESTORE), out.index(INTERRUPT_LINE))
         self.mocks["persist_node_latest_block_hash"].assert_called_once()
+
+    def test_tracker_stops_before_node_stop(self):
+        self.app.stop_tx_tracker = mock.Mock()
+        parent = mock.Mock()
+        parent.attach_mock(self.app.stop_tx_tracker, "stop_tx_tracker")
+        parent.attach_mock(self.mocks["shutdown_node"], "shutdown_node")
+        parent.attach_mock(self.mocks["persist_node_latest_block_hash"], "persist")
+        self.run_tui()
+        self.assertEqual(
+            [c[0] for c in parent.mock_calls], ["stop_tx_tracker", "shutdown_node", "persist"]
+        )
+
+    def test_interrupt_during_tracker_stop_still_restores(self):
+        self.app.stop_tx_tracker = mock.Mock(side_effect=KeyboardInterrupt)
+        code, out = self.run_tui()
+        self.assertEqual(code, 0)
+        self.assertLess(out.index(RESTORE), out.index(INTERRUPT_LINE))
+        self.mocks["persist_node_latest_block_hash"].assert_called_once()
+
+
+class AppTrackerStartTests(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.data_dir = Path(self._tmp.name)
+        self.node = SimpleNamespace(logger=mock.Mock())
+        for target, kwargs in (
+            ("modes.tui.model.start_latest_block_hash_poller", {"return_value": mock.Mock()}),
+            ("modes.tui.model.App._run_cli_startup_actions", {}),
+        ):
+            patcher = mock.patch(target, **kwargs)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+        patcher = mock.patch("modes.tui.model.start_transaction_tracker")
+        self.start_tracker = patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def make_app(self):
+        configs = {"cli": {"latest_block_hash_poll_interval": 10.0}, "node": {}}
+        return App(data_dir=self.data_dir, configs=configs, node=self.node)
+
+    def test_app_starts_tracker(self):
+        tracker, stop = mock.Mock(), mock.Mock()
+        self.start_tracker.return_value = (tracker, stop)
+        app = self.make_app()
+        self.start_tracker.assert_called_once_with(
+            node=self.node, data_dir=self.data_dir, poll_interval=10.0
+        )
+        self.assertIs(app.tx_tracker, tracker)
+        app.stop_tx_tracker()
+        stop.assert_called_once_with()
+
+    def test_app_tracker_start_error_turns_tracking_off(self):
+        self.start_tracker.side_effect = OSError("denied")
+        app = self.make_app()
+        self.assertIsNone(app.tx_tracker)
+        self.assertIsNone(app.stop_tx_tracker())
+        self.node.logger.warning.assert_called()
 
 
 if __name__ == "__main__":

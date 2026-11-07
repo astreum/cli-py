@@ -1,6 +1,7 @@
 import sys
 import tempfile
 import threading
+import time
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -19,6 +20,7 @@ from utils.tx_tracker import (
     TRACKED_FILE_NAME,
     ClaimStats,
     TransactionTracker,
+    start_transaction_tracker,
 )
 
 KEY = bytes(range(32))
@@ -325,6 +327,65 @@ class ClaimStatsTests(unittest.TestCase):
         stats = ClaimStats(sent=10, succeeded=6, failed=1, not_included=2, earned=1000, fees=100)
         self.assertEqual(stats.waiting, 1)
         self.assertEqual(stats.net, 900)
+
+
+class TrackerThreadTests(TrackerTestCase):
+    def wait_for(self, condition, timeout=2.0):
+        done = threading.Event()
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline and not condition():
+            done.wait(0.01)
+        return condition()
+
+    def test_thread_runs_and_stops(self):
+        with mock.patch.object(TransactionTracker, "check_due", return_value=0) as check:
+            tracker, stop = start_transaction_tracker(
+                node=self.node, data_dir=self.data_dir, poll_interval=0.01
+            )
+            self.assertIsInstance(tracker, TransactionTracker)
+            self.assertTrue(self.wait_for(lambda: check.call_count >= 1))
+            stop()
+        self.assertFalse(any(t.name == "tx-tracker" for t in threading.enumerate()))
+
+    def test_pass_error_does_not_stop_thread(self):
+        with mock.patch.object(
+            TransactionTracker, "check_due", side_effect=[RuntimeError("boom")] + [0] * 1000
+        ) as check:
+            _, stop = start_transaction_tracker(
+                node=self.node, data_dir=self.data_dir, poll_interval=0.01
+            )
+            try:
+                self.assertTrue(self.wait_for(lambda: check.call_count >= 2))
+            finally:
+                stop()
+        self.node.logger.warning.assert_called()
+
+    def test_start_error_raises(self):
+        self.tracked_path.mkdir()
+        with self.assertRaises(OSError):
+            start_transaction_tracker(node=self.node, data_dir=self.data_dir, poll_interval=0.01)
+        self.assertFalse(any(t.name == "tx-tracker" for t in threading.enumerate()))
+
+    def test_stop_does_not_wait_for_a_long_check(self):
+        release = threading.Event()
+        started = threading.Event()
+
+        def long_check(stop_event=None):
+            started.set()
+            release.wait(5)
+            return 0
+
+        with mock.patch.object(TransactionTracker, "check_due", side_effect=long_check), \
+                mock.patch("utils.tx_tracker.STOP_TIMEOUT", 0.1):
+            _, stop = start_transaction_tracker(
+                node=self.node, data_dir=self.data_dir, poll_interval=10.0
+            )
+            self.assertTrue(started.wait(2))
+            began = time.monotonic()
+            stop()
+            elapsed = time.monotonic() - began
+            release.set()
+        self.assertLess(elapsed, 1.0)
 
 
 if __name__ == "__main__":
