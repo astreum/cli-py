@@ -21,6 +21,7 @@ from modes.tui.pages.account_find import AccountSearchPage
 from modes.tui.pages.menu import MenuPage
 from modes.tui.pages.search import SearchPage
 from modes.tui.pages.settings import SettingsPage
+from modes.tui.pages.storage import StoragePage
 from modes.tui.pages.terminal import TerminalPage
 from modes.tui.pages.block_view import BlockSearchPage
 from modes.tui.pages.transaction import TransactionPage
@@ -87,6 +88,7 @@ class App:
             "transaction_search": TransactionSearchPage(),
             "transaction_create": TransactionPage(),
             "terminal": TerminalPage(),
+            "storage": StoragePage(),
             "settings": SettingsPage(),
         }
 

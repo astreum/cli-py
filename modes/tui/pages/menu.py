@@ -16,6 +16,7 @@ class MenuPage(BasePage):
                 PageElement(label="Create Account", next="account_create"),
                 PageElement(label="Create Transaction", next="transaction_create"),
                 PageElement(label="Terminal", next="terminal"),
+                PageElement(label="Storage", next="storage"),
                 PageElement(label="Settings", next="settings"),
                 PageElement(label="Quit", action=self._exit_app),
             ]
