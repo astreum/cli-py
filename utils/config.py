@@ -209,9 +209,13 @@ def build_node_config(configs: dict[str, Any], data_dir: Path) -> dict[str, Any]
     """Return a copy of the node settings for passing to `Node`.
 
     The lib changes the dict it receives in place and adds key objects.
-    A copy keeps `configs` free of those values.
+    A copy keeps `configs` free of those values. The lib send log goes to
+    `sent_transactions.csv` in `data_dir` unless `sent_transactions_path` is
+    set; an explicit `None` keeps it off.
     """
     node_config = dict(configs["node"])
+    if "sent_transactions_path" not in node_config:
+        node_config["sent_transactions_path"] = str(data_dir / "sent_transactions.csv")
     if not node_config.get("storage_secret_key"):
         node_config["storage_secret_key"] = load_or_create_storage_key(data_dir)
     latest_hash = load_node_latest_block_hash(data_dir)
