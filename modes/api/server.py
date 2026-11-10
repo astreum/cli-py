@@ -1,8 +1,8 @@
 """Astreum API — FastAPI server exposing node data over HTTP.
 
 Endpoint modules live alongside this file: expr.py, list.py, chain.py,
-block.py, accounts.py, transaction.py.  This module creates the app and
-registers their routers.
+block.py, accounts.py, receipt.py, transaction.py, search.py.  This module
+creates the app and registers their routers.
 """
 
 from __future__ import annotations
@@ -18,6 +18,7 @@ from .list import router as list_router
 from .chain import router as chain_router
 from .block import router as block_router
 from .accounts import router as accounts_router
+from .receipt import router as receipt_router
 from .transaction import router as transaction_router
 from .search import router as search_router
 
@@ -40,5 +41,6 @@ app.include_router(list_router)
 app.include_router(chain_router)
 app.include_router(block_router)
 app.include_router(accounts_router)
+app.include_router(receipt_router)
 app.include_router(transaction_router)
 app.include_router(search_router)

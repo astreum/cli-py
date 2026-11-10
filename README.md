@@ -135,6 +135,7 @@ GET /list/{id}                    Expr list chain from root hash
 GET /chain/{chain_id}             Latest block for a chain (or null)
 GET /block/{id}                   Full block by expression id
 GET /block/{id}/account/{addr}    Account state at a specific block
+GET /block/{id}/receipt/{tx}      Receipt of a transaction in a block
 GET /transaction/{id}             Transaction by expression id
 GET /search                       Transaction search via bloom filters
 ```
