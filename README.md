@@ -154,11 +154,10 @@ curl "http://127.0.0.1:52781/search?receiver=0x..."
 # Search by tx hash
 curl "http://127.0.0.1:52781/search?tx_hash=0x..."
 
-# Search by key
-curl "http://127.0.0.1:52781/search?key=0x..."
-
 # Combine filters (at least one required)
-curl "http://127.0.0.1:52781/search?sender=0x...&receiver=0x...&era_start=0&era_end=5"
+curl "http://127.0.0.1:52781/search?sender=0x...&receiver=0x...&start_block_height=0&end_block_height=5"
 ```
 
-Parameters are hex-encoded bytes. Returns a list of matching block hashes (bloom filter — may include false positives). Optional `era_start` (default 0) and `era_end` (default current era) control the search range.
+Parameters are hex-encoded bytes. `tx_hash`, `sender`, and `receiver` are the search filters (at least one required). Returns `{"results": [...], "count": N}`, where each result is a serialized transaction. Optional `start_block_hash`/`start_block_height` and `end_block_hash`/`end_block_height` control the search range (default end 0 = genesis).
+
+Searching by a contract-emitted `key` is not supported: the keys-based search cannot verify a transaction by the `bloom_insert` key, because that key is not stored on the transaction. See lib-py `docs/research/2026-11-13-keyed-transaction-search.md`.

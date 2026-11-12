@@ -8,7 +8,7 @@ from ..element import PageElement
 from astreum.consensus.block.encoding.decode import get_block_from_storage
 from astreum.consensus.block.holders import block_holder
 from astreum.consensus.transaction.from_storage import get_transaction_from_storage
-from astreum.crypto.bloom_search import bloom_search_tx
+from astreum import find_transactions
 from astreum.expression import ZERO32
 
 
@@ -149,26 +149,27 @@ class TransactionSearchPage(BasePage):
             self.elements = []
             return
 
+        fields = [
+            (b or ZERO32).ljust(32, b"\x00")[:32]
+            for b in (tx_hash_bytes, sender_bytes, recipient_bytes)
+        ]
+        keys = [b"".join(fields) + ZERO32 + ZERO32]
         try:
-            results = bloom_search_tx(
-                astreum_node=app.node,
-                tx_hash=tx_hash_bytes,
-                sender=sender_bytes,
-                receiver=recipient_bytes,
-                key=ZERO32,
-                starting_block=starting_block,
-                end_block_height=0,
+            hits = list(find_transactions(
+                app.node,
+                keys,
+                start_height=starting_block.height,
                 limit=20,
-            )
+            ))
         except Exception as exc:
             app.flash(f"Search error: {exc}", "error")
             return
 
-        if not results:
+        if not hits:
             self._results_body = "No matching transactions found."
         else:
             lines: list[str] = []
-            for tx in results:
+            for tx, _matched_keys in hits:
                 tx_hash_short = (tx.expr_id or tx.hash or b"").hex()[:16]
                 block_short = (tx.block_hash or b"").hex()[:16]
                 sender_short = tx.sender.hex()[:16]

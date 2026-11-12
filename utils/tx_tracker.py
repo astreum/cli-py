@@ -212,14 +212,14 @@ class TransactionTracker:
     def _resolve(self, row: _SentRow, window: int, head) -> Optional[_Result]:
         tx_hash = bytes.fromhex(row.tx_hash)
         try:
-            found = find_transactions(
+            hits = list(find_transactions(
                 self._node,
-                tx_hash=tx_hash,
+                [tx_hash + b"\x00" * 128],
                 start_height=row.sent_height + window,
                 end_height=row.sent_height,
                 limit=1,
-            )
-            if not found:
+            ))
+            if not hits:
                 # The lib also returns no transactions when it cannot load a
                 # block of the range, so "not included" needs the range end.
                 reached = find_block_by_height(
@@ -229,7 +229,7 @@ class TransactionTracker:
                     self._warn("Blocks of %s are not available yet", row.tx_hash[:16])
                     return None
                 return _NOT_INCLUDED
-            block_hash = found[0].block_hash
+            block_hash = hits[0][0].block_hash
             receipt = get_receipt(self._node, block_hash, tx_hash)
             if receipt is None:
                 self._warn("Receipt of %s is not available yet", row.tx_hash[:16])

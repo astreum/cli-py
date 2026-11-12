@@ -72,7 +72,7 @@ class TrackerTestCase(unittest.TestCase):
         find = mock.patch("utils.tx_tracker.find_transactions")
         self.find = find.start()
         self.addCleanup(find.stop)
-        self.find.return_value = [SimpleNamespace(block_hash=BLOCK_HASH)]
+        self.find.return_value = [(SimpleNamespace(block_hash=BLOCK_HASH), [])]
         get = mock.patch("utils.tx_tracker.get_receipt")
         self.get_receipt = get.start()
         self.addCleanup(get.stop)
@@ -111,7 +111,7 @@ class CheckDueTests(TrackerTestCase):
         self.write_sent(sent_line(1, sent_height=5))
         self.tracker().check_due()
         self.find.assert_called_once_with(
-            self.node, tx_hash=tx_hash(1), start_height=15, end_height=5, limit=1
+            self.node, [tx_hash(1) + b"\x00" * 128], start_height=15, end_height=5, limit=1
         )
 
     def test_success_writes_row_and_counts(self):

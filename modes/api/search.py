@@ -38,7 +38,6 @@ def search_transactions(
     tx_hash: Optional[str] = None,
     sender: Optional[str] = None,
     receiver: Optional[str] = None,
-    key: Optional[str] = None,
     start_block_hash: Optional[str] = None,
     start_block_height: Optional[int] = None,
     end_block_hash: Optional[str] = None,
@@ -50,18 +49,22 @@ def search_transactions(
 
     Walks backward from start_height (or the block hash) looking for
     matching transactions via bloom filters.  Stops at end_block_height
-    or the end_block hash (default 0 = genesis) or when limit results
+    or the end block hash (default 0 = genesis) or when limit results
     are found.
 
-    Args are hex-encoded bytes.  At least one of tx_hash, sender, receiver,
-    or key must be provided.  Provide start_block_hash or start_block_height, not both.
+    Args are hex-encoded bytes.  At least one of tx_hash, sender, or receiver
+    must be provided.  Provide start_block_hash or start_block_height, not both.
     Provide end_block_hash or end_block_height, not both.
+
+    The contract-key (``key``) filter was removed: the keys-based search cannot
+    verify a transaction by the ``bloom_insert`` key (that key is not stored on
+    the transaction).
     """
-    all_args = (tx_hash, sender, receiver, key)
+    all_args = (tx_hash, sender, receiver)
     if not any(all_args):
         raise HTTPException(
             status_code=400,
-            detail="Provide at least one of: tx_hash, sender, receiver, key",
+            detail="Provide at least one of: tx_hash, sender, receiver",
         )
 
     if start_block_hash and start_block_height is not None:
@@ -77,10 +80,9 @@ def search_transactions(
         )
 
     try:
-        tx_hash_bytes = bytes.fromhex(tx_hash) if tx_hash else ZERO32
-        sender_bytes = bytes.fromhex(sender) if sender else ZERO32
-        receiver_bytes = bytes.fromhex(receiver) if receiver else ZERO32
-        key_bytes = bytes.fromhex(key) if key else ZERO32
+        tx_hash_bytes = (bytes.fromhex(tx_hash) if tx_hash else ZERO32).ljust(32, b"\x00")[:32]
+        sender_bytes = (bytes.fromhex(sender) if sender else ZERO32).ljust(32, b"\x00")[:32]
+        receiver_bytes = (bytes.fromhex(receiver) if receiver else ZERO32).ljust(32, b"\x00")[:32]
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid hex in query parameter")
 
@@ -110,21 +112,20 @@ def search_transactions(
         except ValueError as exc:
             raise HTTPException(status_code=404, detail=f"End block not found: {exc}")
 
+    keys = [tx_hash_bytes + sender_bytes + receiver_bytes + ZERO32 + ZERO32]
+
     try:
-        results = find_transactions(
+        hits = list(find_transactions(
             node,
-            tx_hash=tx_hash_bytes,
-            sender=sender_bytes,
-            receiver=receiver_bytes,
-            key=key_bytes,
+            keys,
             start_height=resolved_start_height,
             end_height=resolved_end_height,
             limit=limit,
-        )
+        ))
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
     return {
-        "results": [_serialize_tx(tx) for tx in results],
-        "count": len(results),
+        "results": [_serialize_tx(tx) for tx, _ in hits],
+        "count": len(hits),
     }
