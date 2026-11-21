@@ -86,8 +86,6 @@ class BlockSearchPage(BasePage):
             f"  Total Balance:                   {statistics.total_balance}",
             f"  Cumulative Total Balance:        {statistics.cumulative_total_balance}",
             f"  Total Claims:                    {statistics.total_claims}",
-            f"  Total Transaction Fees:          {statistics.total_tx_fees}",
-            f"  Total Transaction Bytes:         {statistics.total_tx_bytes}",
             f"  Total Loan Count:                {statistics.total_loan_count}",
             f"  Total Loaned:                    {statistics.total_loaned}",
             f"  Total Written Off:               {statistics.total_written_off}",

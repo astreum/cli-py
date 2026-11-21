@@ -13,8 +13,6 @@ def _statistics(**overrides):
         total_balance=4,
         cumulative_total_balance=5,
         total_claims=6,
-        total_tx_fees=7,
-        total_tx_bytes=8,
         total_loan_count=9,
         total_loaned=10,
         total_written_off=11,
