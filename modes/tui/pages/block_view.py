@@ -62,10 +62,12 @@ class BlockSearchPage(BasePage):
             f"  Validation Difficulty: {block.validation_difficulty}",
             f"  Nonce:                 {block.nonce}",
             "",
-            f"  Cumulative Total Fee:            {block.cumulative_total_fee}",
-            f"  Cumulative Stake:                {block.cumulative_stake}",
+            f"  Total Base Fee:                  {block.total_base_fee}",
             f"  Total Transaction Fee:           {block.total_transaction_fee}",
             f"  Total Storage Fee:               {block.total_storage_fee}",
+            f"  Transactions:                    {block.transaction_count}",
+            "",
+            *self._format_statistics(block.statistics),
             "",
             f"  Validator Key: 0x{short(block.validator_public_key_bytes)}",
             f"  Body Hash:     0x{short(block.body_hash)}",
@@ -73,6 +75,23 @@ class BlockSearchPage(BasePage):
             f"  Bloom Hash:    0x{short(block.bloom_hash)}",
         ]
         return "\n".join(lines)
+
+    @staticmethod
+    def _format_statistics(statistics) -> list[str]:
+        if statistics is None:
+            return ["  STATISTICS", "  Not set"]
+        return [
+            "  STATISTICS",
+            f"  Total Fees:                      {statistics.total_fees}",
+            f"  Total Balance:                   {statistics.total_balance}",
+            f"  Cumulative Total Balance:        {statistics.cumulative_total_balance}",
+            f"  Total Claims:                    {statistics.total_claims}",
+            f"  Total Transaction Fees:          {statistics.total_tx_fees}",
+            f"  Total Transaction Bytes:         {statistics.total_tx_bytes}",
+            f"  Total Loan Count:                {statistics.total_loan_count}",
+            f"  Total Loaned:                    {statistics.total_loaned}",
+            f"  Total Written Off:               {statistics.total_written_off}",
+        ]
 
     def _do_latest(self, app):
         head_hash = app.node.latest_block_hash

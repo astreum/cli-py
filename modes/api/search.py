@@ -25,6 +25,7 @@ def _serialize_tx(tx) -> dict:
         "code": tx.code.name if hasattr(tx.code, "name") else int(tx.code),
         "counter": tx.counter,
         "cost_limit": tx.cost_limit,
+        "base_fee": tx.base_fee,
         "data": (tx.data.value.hex() if tx.data is not None and tx.data.base == "bytes" and tx.data.value else ""),
         "recipient": tx.recipient.hex(),
         "sender": tx.sender.hex(),

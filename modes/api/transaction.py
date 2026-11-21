@@ -34,6 +34,7 @@ def get_transaction(tx_id: str, node=Depends(require_node)):
         "code": tx.code.name if hasattr(tx.code, "name") else int(tx.code),
         "counter": tx.counter,
         "cost_limit": tx.cost_limit,
+        "base_fee": tx.base_fee,
         "data": repr(tx.data),
         "recipient": tx.recipient.hex(),
         "sender": tx.sender.hex(),
@@ -67,6 +68,13 @@ def submit_transaction(payload: dict = Body(...), node=Depends(require_node)):
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Invalid data expression: {exc}")
 
+    # 3b. Parse the base fee bid
+    base_fee = payload.get("base_fee", 1)
+    if not isinstance(base_fee, int) or isinstance(base_fee, bool) or base_fee < 0:
+        raise HTTPException(
+            status_code=400, detail="base_fee must be a non-negative integer"
+        )
+
     # 4. Reconstruct and verify transaction
     try:
         tx = Transaction(
@@ -76,6 +84,7 @@ def submit_transaction(payload: dict = Body(...), node=Depends(require_node)):
             recipient=recipient_bytes,
             sender=sender_bytes,
             cost_limit=payload.get("cost_limit", 0),
+            base_fee=base_fee,
             code=code_enum,
             signature=signature_bytes,
             body_hash=body_hash_bytes,

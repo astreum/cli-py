@@ -237,7 +237,10 @@ class TransactionTracker:
             return _Result(
                 RESULT_SUCCESS if receipt.status == STATUS_SUCCESS else RESULT_FAILED,
                 block_hash.hex(),
-                int(receipt.transaction_fee),
+                # The receipt splits the transaction fee into the inclusion
+                # bid and the execution charge. The tracked file keeps one
+                # column for their sum.
+                int(receipt.base_fee) + int(receipt.execution_fee),
                 int(receipt.data_fee),
                 int(receipt.storage_fee),
                 int(receipt.mint),

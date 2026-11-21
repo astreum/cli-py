@@ -16,10 +16,11 @@ def _serialize_receipt(receipt, block_hash: bytes) -> dict:
         "transaction_hash": hex_encode(receipt.transaction_hash),
         "block_hash": hex_encode(block_hash),
         "status": int(receipt.status),
-        "transaction_fee": int(receipt.transaction_fee),
+        "base_fee": int(receipt.base_fee),
         "data_fee": int(receipt.data_fee),
         "execution_fee": int(receipt.execution_fee),
         "storage_fee": int(receipt.storage_fee),
+        "total_fee": int(receipt.total_fee),
         "mint": int(receipt.mint),
         "logs_hash": hex_encode(receipt.logs_hash),
     }

@@ -47,7 +47,7 @@ def sent_line(n, *, sender=KEY, code=CLAIM, sent_height=5):
 def receipt(n, *, status=STATUS_SUCCESS, mint=100):
     return Receipt(
         tx_hash(n),
-        transaction_fee=1,
+        base_fee=1,
         storage_fee=3,
         data_fee=2,
         execution_fee=0,
