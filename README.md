@@ -96,6 +96,11 @@ Example overriding node settings:
 python main.py --headless --node-verbose false --node-cold-storage-path "./atoms"
 ```
 
+Write debug records to `node.csv` (console output stays at INFO):
+```bash
+python main.py --headless --node-log-level DEBUG
+```
+
 Disable the default seed:
 ```bash
 python main.py --headless --node-default-seed none

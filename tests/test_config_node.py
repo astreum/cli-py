@@ -43,6 +43,10 @@ class BuildNodeConfigSentLogTests(unittest.TestCase):
         configs, _ = self.build({})
         self.assertNotIn("sent_transactions_path", configs["node"])
 
+    def test_keeps_log_level(self):
+        _, node_config = self.build({"log_level": "DEBUG"})
+        self.assertEqual(node_config["log_level"], "DEBUG")
+
 
 if __name__ == "__main__":
     unittest.main()
